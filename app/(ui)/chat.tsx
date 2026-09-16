@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useChat, type Tier } from './use-chat'
 import { SUGGESTIONS } from '@/lib/chat/suggestions'
+import { HandoffForm } from './handoff-form'
+import { getSessionId } from './use-chat'
 
 /**
  * The chat surface. Built to docs/mock/Empty.dc.html and Main.dc.html.
@@ -80,6 +82,13 @@ export function Chat() {
                 streaming={state.streaming && i === state.turns.length - 1}
               />
             ))}
+            {/* Inline in the transcript, never a modal: the offer is part of the
+                answer, not an interruption of it. */}
+            {state.escalated && !state.streaming ? (
+              <li>
+                <HandoffForm sessionId={getSessionId()} topic={lastUserMessage(state.turns)} />
+              </li>
+            ) : null}
           </ol>
         )}
         <div ref={transcriptEnd} />
@@ -93,6 +102,15 @@ export function Chat() {
       />
     </div>
   )
+}
+
+/** What the user was asking when the bot escalated, so the team has context. */
+function lastUserMessage(turns: { role: string; content: string }[]): string {
+  for (let i = turns.length - 1; i >= 0; i--) {
+    const turn = turns[i]
+    if (turn?.role === 'user') return turn.content
+  }
+  return ''
 }
 
 function Header({ tier, simulated }: { tier: Tier; simulated: boolean }) {
