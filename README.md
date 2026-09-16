@@ -76,6 +76,13 @@ design documents and no application code. A build from it does not fail loudly �
 a broken application rather than a build of the wrong branch, so check the build log's
 `Cloning … (Branch: …)` line before debugging anything else.
 
+That first empty build has a second effect worth knowing: with no `package.json` to inspect,
+Vercel detects no framework and pins the project to "Other" with an output directory of
+`public`. Every later build then fails with *No Output Directory named "public" found*, long
+after the branch is fixed. `vercel.json` pins `"framework": "nextjs"` so the repository
+carries the answer rather than depending on a dashboard setting that was decided by an
+accident of ordering.
+
 ### 2a. Vercel — third-party Git import (no GitHub connection)
 
 A GitHub account can hold a Vercel Login Connection for only one Vercel account, so if that
