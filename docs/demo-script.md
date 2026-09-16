@@ -68,7 +68,7 @@ and re-ask question 1:
 - The answer still arrives — canned, from the same KB, plus the handoff.
 - **No error is ever shown to the user.**
 
-> "Three tiers: Flash, then Flash Lite at a third the cost, then static answers at zero.
+> "Three tiers: Gemini 3.8 Flash, then 3.1 Flash Lite at a third the cost, then static answers at zero.
 > $1.20 is reserved and only unlockable in a window I set around this meeting — which is
 > why the bot is on the primary model right now. And if it can't read the ledger at all, it
 > **refuses to call the model**. Fails closed. A Redis outage costs a bad afternoon; failing

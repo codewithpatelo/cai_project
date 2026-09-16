@@ -22,7 +22,7 @@ Everything below exists to protect those two.
 | Framework | Next.js 15, App Router, TypeScript strict |
 | Host | Vercel (Node runtime, SSE streaming) |
 | Store | Upstash Redis via Vercel Marketplace |
-| LLM | OpenRouter → `google/gemini-2.5-flash` (primary) / `google/gemini-2.5-flash-lite` (degraded) |
+| LLM | OpenRouter → `google/gemini-3.8-flash` (primary) / `google/gemini-3.1-flash-lite` (degraded). Pinned ids, never `~latest` aliases |
 | UI | Tailwind, no component library |
 | Tests | Vitest |
 | PM | pnpm |

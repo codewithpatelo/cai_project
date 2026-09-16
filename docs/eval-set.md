@@ -108,8 +108,8 @@ costs nothing, so there is no excuse for it to be skipped. `pnpm test` must be g
 any commit (CLAUDE.md hard rule).
 
 **Layer 2 — end-to-end against the real model, hard-capped at $0.40 total.**
-Sections A–D, one request each (32 × ~$0.0028 ≈ **$0.09**, so the $0.40 cap is ~4× headroom
-for reruns). Run by `/eval`, which:
+Sections A–D, one request each (32 × ~$0.0063 ≈ **$0.20**, so the $0.40 cap allows one
+full run plus a re-run of the failures, and no more). Run by `/eval`, which:
 - reads a **separate** `EVAL_BUDGET_USD=0.40` ledger key, not the production one;
 - aborts mid-run the moment cumulative real cost crosses the cap, reporting how far it got;
 - reconciles each case's cost against `GET /api/v1/generation` and prints the delta;

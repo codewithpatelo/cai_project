@@ -11,9 +11,15 @@ description: Pre- and post-deploy verification of the public URL. Run before eve
 3. `GOVERNOR_SIM_ENABLED` is **unset** in production. A simulated budget in production is a
    bot that thinks it's broke, or worse, one that thinks it's rich.
 4. `pnpm build` succeeds locally, including the KB compile step.
-5. Re-check OpenRouter prices for both tier models against the table in
-   `docs/model-selection.md` §1. **If any has moved more than 20%, stop and recompute §3**
-   before deploying — running on stale budget math is how the key dies early.
+5. Confirm `MODEL_PRIMARY` and `MODEL_ECONOMY` are **pinned ids**, not `~latest` aliases
+   (ADR-013). An alias can change model, price and behaviour with no deploy on our side.
+6. Re-check OpenRouter prices for both tier models against the table in
+   `docs/model-selection.md` §1. **If either has moved more than 20%, stop and recompute §3**
+   before deploying — running on stale budget math is how the key dies early. If the price
+   changed, also re-derive the per-IP daily cap: the limits are denominated in requests but
+   exist to bound dollars (`governor-spec.md` §7).
+7. Check whether a newer model in the same family has shipped. Note it; do **not** switch
+   mid-window without re-running the evals and §3.
 
 ## After deploying — on the public URL, not localhost
 ```bash

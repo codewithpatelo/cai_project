@@ -110,7 +110,7 @@ Response: `text/event-stream`, `Transfer-Encoding: chunked`.
 
 ```
 event: meta
-data: {"tier":"PRIMARY","model":"google/gemini-2.5-flash","simulated":false}
+data: {"tier":"PRIMARY","model":"google/gemini-3.8-flash","simulated":false}
 
 event: token
 data: {"t":"Cadre AI is an AI strategy"}

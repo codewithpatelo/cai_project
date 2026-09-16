@@ -30,7 +30,8 @@ availability problem into a degraded-but-honest experience.
 ### ADR-003 — Whole knowledge base in context; no RAG
 **Decision.** All of `kb/` (≈4,700 tokens) in every request. No embeddings, no retrieval.
 **Alternatives.** Vector store + top-k retrieval; keyword routing to topic files.
-**Why.** At 4,700 tokens the KB costs **$0.0014/request** on Flash. RAG would add a
+**Why.** At 4,700 tokens the KB costs **$0.0035/request** uncached on 3.8 Flash, and a
+tenth of that on a cache hit. RAG would add a
 chunker, an index, a retriever, retrieval-quality evals, and a new failure mode. It would
 start paying off north of ~50,000 KB tokens — we're 10× below that. The deeper reason is
 groundedness, not cost: with full context the model sees **every `Not published` block on
@@ -40,20 +41,32 @@ exact block that prevents a hallucination.
 tokens before this flips. Revisit at that threshold (`architecture.md` §7).
 
 ---
-### ADR-004 — `google/gemini-2.5-flash` primary, `flash-lite` degraded
-**Decision.** Flash ($0.30/$2.50) primary; Flash Lite ($0.10/$0.40) as the economy tier.
-**Alternatives.** `openai/gpt-5-mini` ($0.25/$2.00); `anthropic/claude-haiku-4.5` ($1/$5).
-**Why.** GPT-5-mini is nominally cheaper but is a reasoning model — reasoning tokens bill
-as *output* and vary per request. A system whose central requirement is a hard, predictable
-ceiling is better served by a model with bounded output than by one 20% cheaper on paper.
-Haiku is the better instruction-follower but costs 3.3× on input for quality this task
-isn't bound by, cutting capacity from ~370 conversations to ~110. Flash Lite as the
-degradation step keeps the same family, tokenizer, prompt and evals — degrading across
-families would mean maintaining a second prompt under budget pressure at the worst moment.
-Full arithmetic: `docs/model-selection.md`.
-**Trade-off.** Flash is not the strongest refusal-follower available. Mitigated by evals
-section C; if it fails them, Haiku is the documented escape hatch and the switch is one
-config line.
+### ADR-004 — `gemini-3.8-flash` primary, `gemini-3.1-flash-lite` degraded
+**Decision.** `google/gemini-3.8-flash` ($0.75/$3.75) primary;
+`google/gemini-3.1-flash-lite` ($0.25/$1.50) as the economy tier. Pinned ids, not aliases.
+**Alternatives.** `openai/gpt-5.4-mini` ($0.75/$4.50); `anthropic/claude-haiku-4.5`
+($1.00/$5.00); `google/gemini-3.5-flash-lite` ($0.30/$2.50).
+**Superseded.** An earlier draft chose `gemini-2.5-flash` / `gemini-2.5-flash-lite`
+($0.30/$2.50 and $0.10/$0.40). Those are 2025-generation models. They were cheaper — ~370
+projected conversations against ~166 — but shipping a generation-old model in September
+2026 is the wrong answer to the one decision the brief explicitly asks us to defend, and
+the quality-critical behaviour here (refusal discipline: not padding the pillar list, not
+producing a plausible portal URL under pressure) is exactly where a generation gap shows.
+**Why 3.8 Flash.** Current-generation, the most capable model in the Flash line. Against
+`gpt-5.4-mini`: identical input price, 20% more on output, and it is a reasoning model
+whose reasoning tokens bill as output and vary per request — the wrong trade for a system
+built around a *predictable* ceiling. Against Haiku 4.5: 33% cheaper on both sides for a
+task that isn't quality-bound once the KB is in context. It also publishes cache read at
+**10% of input with no write cost**, which is worth real money against a 5,800-token fixed
+prefix.
+**Why 3.1 Flash Lite.** Cheapest current-generation option, 2.9× cheaper per conversation,
+and — the deciding factor — same family, tokenizer and prompt, so degrading doesn't mean
+maintaining a second prompt and eval baseline under budget pressure.
+**Trade-off accepted.** Capacity drops from ~370 to **~166 primary conversations** (~220
+mixed-tier). Still ~31/day, far more than this bot will organically serve. The second-order
+cost is real and was paid: 2.25× per-turn cost meant the per-IP daily cap had to tighten
+from 120 to 80 requests to keep one abuser bounded at ~$0.50/day. Haiku 4.5 remains the
+documented escape hatch if evals section C fails; the switch is one config line.
 
 ---
 ### ADR-005 — Budget governor as a generic, domain-free module
@@ -120,11 +133,13 @@ anti-advertisement.
 **Alternatives.** Engineer for cache hits and plan capacity assuming them; skip caching
 considerations entirely.
 **Why.** OpenRouter's implicit cache TTL is ~3–5 minutes. A demo bot's traffic is sparse
-and bursty, so most conversations start cold. Budgeting on hits we probably won't get is
-how a budget silently fails. Ordering for them anyway is free.
-**Trade-off.** Capacity estimates in `model-selection.md` are conservative — likely
-pessimistic by 10–30% in practice. Being wrong in that direction is the correct way to be
-wrong about money.
+and bursty, so most conversations start cold — even though most turns *within* a
+conversation will hit. Budgeting on hits we probably won't get is how a budget silently
+fails. Ordering for them anyway is free.
+**Trade-off.** Capacity estimates in `model-selection.md` are conservative. With
+3.8 Flash's cache read at 10% of input, a fully-warm 4-turn conversation costs $0.0135
+against the $0.0252 budgeted — so real-world capacity may be up to ~1.8× the planned
+figure. Being wrong in that direction is the correct way to be wrong about money.
 
 ---
 ### ADR-011 — KB verified from search extracts, pending a live re-read
@@ -151,6 +166,20 @@ trustworthiness. The bot cannot leak what it never stored.
 tokens, cost, tier and latency, which is what's needed to reason about the system.
 
 ---
+### ADR-013 — Pin model ids; never use a `~latest` alias
+**Decision.** Config carries `google/gemini-3.8-flash` and `google/gemini-3.1-flash-lite`
+explicitly. `~google/gemini-flash-latest` and `~anthropic/claude-haiku-latest` exist and are
+not used.
+**Alternatives.** Track the alias and always get the newest model.
+**Why.** An alias can change model, price and behaviour mid-window with no deploy on our
+side. That would silently invalidate every figure in `model-selection.md` §3, every eval
+baseline, and the rate-limit derivation — on a key that cannot be topped up, during a
+window that ends in a live review. Upgrading should be a commit someone made on purpose,
+which re-runs the budget arithmetic and the evals.
+**Trade-off.** We can ship on a model that has been superseded mid-week. `/deploy-check`
+already re-reads prices and fails on >20% drift, which surfaces the common case.
+
+---
 
 ## Risk register
 
@@ -159,7 +188,7 @@ tokens, cost, tier and latency, which is what's needed to reason about the syste
 | R1 | **Budget exhausted before the live review** | Low | Fatal | Reserve (ADR-008) + pacing + 3-tier degradation + rate limits + fail-closed. Worst case the bot serves STATIC answers, which still demo all six scenarios | Demo shows canned answers; the governor itself becomes the demo |
 | R2 | **Bot hallucinates a Cadre fact** — especially a portal URL | Medium | High | KB-only grounding; `Not published` blocks; output-side URL allow-list (catches it regardless of *why* the model said it); eval assertions `no_url_outside_allowlist`, `no_price`; `/kb-audit` | Novel phrasings may still produce an ungrounded sentence; the URL filter bounds the damage |
 | R3 | **Deploy breaks near the review** | Medium | High | Deploy in Phase 2, then continuously; `/deploy-check` after every deploy; Vercel instant rollback to the last good deployment | A bad deploy at the wrong minute; rollback is <1 min |
-| R4 | **Public URL abused / scripted** | Medium | High | Per-IP 8/min + 120/day, per-session 6/min + 40 lifetime, 2,000-char message cap. 120/day/IP bounds one abuser to ~$0.34/day | Distributed abuse across IPs; ceiling + fail-closed remain the backstop |
+| R4 | **Public URL abused / scripted** | Medium | High | Per-IP 8/min + 80/day, per-session 6/min + 40 lifetime, 2,000-char message cap. 80/day/IP bounds one abuser to ~$0.50/day. Caps are re-derived whenever the model price changes | Distributed abuse across IPs; ceiling + fail-closed remain the backstop |
 | R5 | **API key leaked** | Low | Fatal | Env vars only; server-only handler; never in repo, history, logs, bundle or error text; `/verify` greps the staged diff and the full history | If leaked: revoke at OpenRouter immediately, rotate, redeploy. The $5 cap bounds the loss |
 | R6 | **Redis outage** | Low | Medium | Fail closed → STATIC. Bot stays up and honest | Degraded answers for the outage duration |
 | R7 | **OpenRouter outage or model deprecation** | Low | Medium | Two models configured; any upstream failure → STATIC after one retry | Both Google models unavailable simultaneously → STATIC only |

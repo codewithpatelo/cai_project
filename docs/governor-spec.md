@@ -28,7 +28,7 @@ does four separable jobs, and they compose:
 export type Tier = 'PRIMARY' | 'ECONOMY' | 'STATIC';
 
 export interface ModelTier {
-  id: string;                    // provider model id, e.g. 'google/gemini-2.5-flash'
+  id: string;                    // pinned provider model id, e.g. 'google/gemini-3.8-flash'
   inputPerMTok: number;          // USD
   outputPerMTok: number;         // USD
   cachedInputPerMTok?: number;   // USD, if the provider prices cache reads
@@ -191,8 +191,8 @@ paying for tokens.
 
 | Tier | Entered when | Model | KB | History | User sees |
 |---|---|---|---|---|---|
-| `PRIMARY` | default | Flash | full | 6 turns / 1,500 tok | normal streamed answer |
-| `ECONOMY` | `spentLifetime ≥ 60% × total` **OR** `spentToday ≥ 80% × dailyAllowance` | Flash Lite | full | 4 turns / 900 tok | normal streamed answer, slightly terser |
+| `PRIMARY` | default | primary tier model | full | 6 turns / 1,500 tok | normal streamed answer |
+| `ECONOMY` | `spentLifetime ≥ 60% × total` **OR** `spentToday ≥ 80% × dailyAllowance` | economy tier model | full | 4 turns / 900 tok | normal streamed answer, slightly terser |
 | `STATIC` | `spentLifetime ≥ 76% × total` (outside reserve window) **OR** daily allowance exhausted **OR** `ledger_unavailable` **OR** rate limited **OR** upstream error after 1 retry | none | n/a | n/a | keyword-matched FAQ answer + handoff form |
 
 `76%` is not arbitrary: it is `(5.00 − 1.20) / 5.00`, the point at which only the locked
@@ -238,13 +238,19 @@ Per-conversation caps, enforced in `trimHistory()` before prompt assembly:
 | Scope | Window | Max | On breach |
 |---|---|---|---|
 | per IP | 60 s | 8 requests | `STATIC` + `retryAfterSec` |
-| per IP | 24 h | 120 requests | `STATIC` for the rest of the window |
+| per IP | 24 h | 80 requests | `STATIC` for the rest of the window |
 | per session | 60 s | 6 requests | `STATIC` + `retryAfterSec` |
 | per session | lifetime | 40 messages | `STATIC` + "start a new conversation" |
 
 Fixed-window counters via `expiringIncr` (`INCR` + `EXPIRE NX`) — one round trip, no Lua,
 good enough at this scale. Sliding windows are `LATER`. The 24h per-IP cap is the one that
-actually bounds a determined abuser's spend: 120 × $0.0028 ≈ **$0.34/day/IP** worst case.
+actually bounds a determined abuser's spend: 80 × $0.0063 ≈ **$0.50/day/IP** worst case.
+
+That cap is deliberately tighter than the 120/day an earlier draft carried. Moving to a
+current-generation primary model raised per-turn cost 2.25×, so the same request cap would
+have let one IP burn $0.76/day — a fifth of the operating budget. **When the model price
+changes, the rate limits are part of what changes with it**; they are denominated in
+requests but they exist to bound dollars.
 
 Breaching a rate limit returns a **429-shaped but friendly** response: the user gets a
 static answer and a "give it a few seconds" note, never a stack trace.
@@ -257,7 +263,7 @@ single-line JSON for Vercel log drains:
 ```jsonc
 {
   "ts": "2026-09-16T12:00:00.000Z",
-  "model": "google/gemini-2.5-flash",
+  "model": "google/gemini-3.8-flash",
   "tier": "PRIMARY",
   "inputTokens": 7150, "outputTokens": 243, "cachedInputTokens": 5800,
   "reasoningTokens": 0,
