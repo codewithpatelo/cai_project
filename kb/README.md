@@ -26,12 +26,19 @@ pages could not be fetched directly. Facts below were recovered from search-engi
 extracts of those pages on **2026-09-16** and are tagged:
 
 - `[V:snippet]` — sourced to a real cadreai.com URL, text recovered via search extract.
-  **Must be re-read against the live page in Phase 2 (`/kb-audit --live`) before deploy.**
 - `[V:brief]` — stated in the take-home brief. Authoritative, no re-check needed.
-- `[V:live]` — confirmed by reading the live page. Only Phase 2 may set this tag.
+- `[V:live]` — confirmed by reading the live page. Only `/kb-audit --live` sets this tag.
 
-Any `[V:snippet]` fact that cannot be confirmed on the live page in Phase 2 is **deleted**,
-not softened. The bot loses a fact; it does not gain a guess.
+**When the live audit runs.** `kb-curator` runs `/kb-audit --live` in the post-Phase-0
+fan-out, before Phase 2 puts the bot on a public URL — shipping unverified facts to real
+users is the thing the tags exist to prevent. Phase 7 re-runs it as the final gate, because
+the KB may have grown in between.
+
+Any `[V:snippet]` fact that cannot be confirmed on the live page is **deleted**, not
+softened. The bot loses a fact; it does not gain a guess.
+
+**Current counts (design pass, 2026-09-16):** 8 `[V:brief]` · 31 `[V:snippet]` ·
+**0 `[V:live]`**. Every snippet fact is unverified until the live audit runs.
 
 ## Page inventory discovered (all `[V:snippet]`, 2026-09-16)
 

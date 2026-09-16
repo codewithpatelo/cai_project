@@ -227,8 +227,13 @@ their write sets don't intersect.
 | `reviewer` | nothing (read-only) | the diff | — |
 
 **Recommended fan-out, once, after Phase 0:**
-`kb-curator` (verify sources live) ∥ `governor-engineer` (Phase 3) — while the main thread
+`kb-curator` (`/kb-audit --live`) ∥ `governor-engineer` (Phase 3) — while the main thread
 does Phases 1 and 2. Rejoin before Phase 4, which is the first phase that needs both.
+
+**`kb-curator` must finish before Phase 2 deploys.** Phase 2 puts the bot on a public URL;
+doing that with 31 unverified `[V:snippet]` facts ships exactly the failure the whole KB
+discipline exists to prevent. If the audit isn't done, Phase 2 deploys with only the 8
+`[V:brief]` facts and the escalation paths — a smaller bot, still an honest one.
 
 Do **not** parallelise Phases 2, 4, 5 or 7: each edits `app/api/chat/route.ts`, and two
 agents in one route handler is a merge conflict plus a debugging session, which costs more
