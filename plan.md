@@ -1,5 +1,12 @@
 # plan.md — build plan
 
+**Hard dates.** Live review: **Wed 23 Sep 2026, 17:00–18:00.** The brief requires
+submitting at least one full business day before it, so the real deadline is **end of
+Mon 21 Sep** — five days from the design pass, not seven. The $5 key is a 7-day key, which
+means it may expire *on review day*; the pacing horizon is therefore capped at the end of
+the review window, and the STATIC tier (which needs no key at all) is what guarantees the
+URL still answers if it dies. See `docs/decisions.md` §5–6.
+
 Eight phases, sequential, **4h55m** of build time. Each phase names its goal, its files, a
 **verifiable** done-criterion, a commit message, and an estimate.
 

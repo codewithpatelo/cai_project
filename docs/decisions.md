@@ -195,7 +195,8 @@ already re-reads prices and fails on >20% drift, which surfaces the common case.
 | R8 | **Prompt injection** | Medium | Low | Nothing to steal (no tools, no account access, no secrets in context) + structural data/instruction separation + output URL filter | Off-brand output; bounded by design, not by the model behaving |
 | R9 | **Prices move during the 7 days** | Low | Medium | `/deploy-check` re-reads prices and fails on >20% drift, forcing recalculation | Mid-window change between deploys |
 | R10 | **`[V:snippet]` facts turn out wrong** | Medium | Medium | `/kb-audit --live` gates the final deploy; unconfirmed facts are deleted, not softened | A smaller KB and more handoffs — which is the correct failure |
-| R11 | **Scope overrun; nothing finished** | Medium | High | Phase 2 deploys a working bot at 1h35m; explicit cut-order in `plan.md`; Phase 6/7 are the cuttable ones | Less polish, fewer evals; the deliverable still exists |
+| R11 | **Key expires on or before review day** | Medium | High | Pacing horizon capped at the review window; STATIC tier needs no key and still answers every brief scenario; reserve unlocked from 12:00Z on review day | If the key dies mid-demo the bot degrades visibly — which is a demonstrable design property, not an outage |
+| R12 | **Scope overrun; nothing finished** | Medium | High | Phase 2 deploys a working bot at 1h35m; explicit cut-order in `plan.md`; Phase 6/7 are the cuttable ones | Less polish, fewer evals; the deliverable still exists |
 
 ## Open questions taken as decisions
 
@@ -207,10 +208,33 @@ Per the brief, ambiguity is resolved and recorded rather than escalated:
    three verified things (partners incl. OpenRouter, guardrails-and-human-oversight, and
    its own transparent build) and escalates the specifics. (`kb/07`)
 3. **Pricing** — permanently out of scope, not a time constraint. (`kb/09` B1)
-4. **Live-review window** — must be set in config before submission. If unknown at deploy
-   time, default the reserve window to the **last 48 hours** before key expiry, which is
-   strictly safer than guessing a narrower slot.
-5. **The empty `key.txt` in the submission bundle** — the provided key file was empty at
+4. **Live-review window** — **resolved: Wed 23 Sep 2026, 17:00–18:00 local.** Config is set
+   to `2026-09-23T12:00:00Z → 2026-09-24T06:00:00Z`. The timezone was not stated, so the
+   window is a deliberately wide 18 hours rather than a tight 1-hour slot: too narrow
+   (wrong timezone guess) makes the reserve unreachable at exactly the moment it exists
+   for; too wide only risks unlocking $1.20 a few hours early. The asymmetry is total, so
+   the choice is easy. Narrow it if the timezone is confirmed.
+5. **Key expiry collides with review day — the schedule is the tightest constraint, not
+   the budget.** The review is Wed 23 Sep; a $5/7-day key issued on 16 Sep expires the
+   *same day*. Two consequences, both already handled by the design rather than by luck:
+   - **Pacing horizon = `min(real key expiry, end of review window)`**, not the key expiry
+     alone. Pacing exists to keep the bot alive until the review; spreading money past it
+     is spreading money over days that no longer matter.
+   - **An expired key does not take the bot down.** The STATIC tier costs $0 and makes no
+     provider call, so a dead or exhausted key still answers all six brief scenarios from
+     the same KB and still captures leads. This is the strongest argument for ADR-007
+     (degrade, don't hard-stop) and it should be said out loud in the demo.
+
+   **Action for the implementer: confirm the exact expiry timestamp before deploying.** If
+   it lands before the review window, the reserve is worthless and the honest plan is to
+   demo the STATIC tier deliberately.
+
+6. **Submission deadline is Mon 21 Sep, not review day.** The brief requires submitting
+   "at least one full business day before your scheduled review". Review Wed 23 → Tue 22
+   must be a full business day → submit by end of Mon 21. That is **5 days from the design
+   pass, not 7**, and it is the date `plan.md` should be executed against.
+
+7. **The empty `key.txt` in the submission bundle** — the provided key file was empty at
    design time. The key is consumed **only** from the hosting environment's variables, so
    this changes nothing structurally; it is noted so the build phase doesn't stall looking
    for it. No call was made with any key during the design pass.
