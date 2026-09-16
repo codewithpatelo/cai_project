@@ -120,7 +120,9 @@ interface Governor {
 ```
 
 `LedgerStore` is a three-method port (`incrBy`, `getMany`, `expiringIncr`) so the module is
-storage-agnostic. Ship a Redis adapter and an in-memory adapter for tests.
+storage-agnostic. Ship a Supabase adapter and an in-memory adapter for tests. The port is
+the point: the store was swapped from Redis to Postgres during design and the change touched
+the adapter and the config, nothing else.
 
 ## 2. Cost accounting
 
@@ -162,13 +164,17 @@ https://openrouter.ai/docs/api_reference/limits (both 2026-09-16)
 > 'ledger_unavailable' }`.
 
 This is the one rule with no escape hatch, no timeout-and-proceed, no "probably fine".
-The failure mode it prevents — Redis down, every request looks free, $5 gone in minutes —
+The failure mode it prevents — store unreachable, every request looks free, $5 gone in minutes —
 is unrecoverable, because the key cannot be topped up. Degrading to canned FAQ answers
-during a Redis outage is a bad afternoon. Being broke on review day is a failed take-home.
+during a store outage is a bad afternoon. Being broke on review day is a failed take-home.
 
-Concretely: Redis timeout is **400 ms**; a timeout *is* unavailability, not a retry. There
-is no in-process counter fallback, because serverless instances don't share one and a
-per-instance counter would under-count by exactly the concurrency factor.
+Concretely: the ledger call times out at **400 ms**; a timeout *is* unavailability, not a
+retry. There is no in-process counter fallback, because serverless instances don't share one
+and a per-instance counter would under-count by exactly the concurrency factor.
+
+A paused or unreachable Supabase project therefore degrades the bot to STATIC rather than
+taking it down — which is the correct behaviour, and worth knowing about because Supabase's
+free tier pauses projects after 7 days of no activity.
 
 ## 4. Pacing
 
@@ -242,8 +248,9 @@ Per-conversation caps, enforced in `trimHistory()` before prompt assembly:
 | per session | 60 s | 6 requests | `STATIC` + `retryAfterSec` |
 | per session | lifetime | 40 messages | `STATIC` + "start a new conversation" |
 
-Fixed-window counters via `expiringIncr` (`INCR` + `EXPIRE NX`) — one round trip, no Lua,
-good enough at this scale. Sliding windows are `LATER`. The 24h per-IP cap is the one that
+Fixed-window counters via `expiringIncr`, which maps to the single `governor_incr(key, 1,
+ttl)` call in `architecture.md` §5 — one round trip, and an expired row resets in place so
+there is no cleanup job to forget. Sliding windows are `LATER`. The 24h per-IP cap is the one that
 actually bounds a determined abuser's spend: 80 × $0.0063 ≈ **$0.50/day/IP** worst case.
 
 That cap is deliberately tighter than the 120/day an earlier draft carried. Moving to a
@@ -257,8 +264,9 @@ static answer and a "give it a few seconds" note, never a stack trace.
 
 ## 8. Telemetry
 
-One row per call, appended to a capped Redis list (last 1,000) and `console.log`-ed as
-single-line JSON for Vercel log drains:
+One row per call, emitted as single-line JSON to `console.log` for Vercel's log drain. It is
+deliberately not a table — nothing queries it during a request, and a table would invite
+someone to start putting message content in it:
 
 ```jsonc
 {
@@ -308,7 +316,8 @@ reason to build it this way:
 
 - `FakeClock` — drive the 7-day pacing curve, the UTC-midnight reset, and the reserve
   window without waiting.
-- `MemoryLedgerStore` — deterministic, plus a `FailingStore` for the fail-closed path.
+- `MemoryLedgerStore` — deterministic, plus a `FailingStore` (throws) and a `SlowStore`
+  (exceeds the 400 ms budget) for both fail-closed paths.
 - `MockLlm` — returns canned usage blocks, including malformed ones, to exercise the
   estimate fallback.
 

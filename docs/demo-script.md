@@ -71,7 +71,7 @@ and re-ask question 1:
 > "Three tiers: Gemini 3.8 Flash, then 3.1 Flash Lite at a third the cost, then static answers at zero.
 > $1.20 is reserved and only unlockable in a window I set around this meeting — which is
 > why the bot is on the primary model right now. And if it can't read the ledger at all, it
-> **refuses to call the model**. Fails closed. A Redis outage costs a bad afternoon; failing
+> **refuses to call the model**. Fails closed. A store outage costs a bad afternoon; failing
 > open costs the whole key, and there's no topping it up."
 
 > "None of it burned real money to show you — it's the real code path with a simulated
@@ -106,7 +106,8 @@ Pick the true ones on the day. Candidates:
   `/kb-audit --live` deleted `Y` claims that didn't survive re-reading."
 - "Rate limits are fixed-window, not sliding — burst-abusable at the boundary. `LATER`."
 - "Single-turn evals only. Multi-turn drift is untested and that's where I'd look first."
-- "No CRM integration — leads sit in Redis with a 30-day TTL, and the bot says so."
+- "No CRM integration — leads sit in a Postgres table with 30-day retention, and the bot
+  says so."
 
 Close:
 > "With another five hours: multi-turn evals, sliding windows, and a semantic cache — which

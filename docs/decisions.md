@@ -15,16 +15,32 @@ with a server-only route handler between the key and the browser.
 first request. Both acceptable for a 7-day demo.
 
 ---
-### ADR-002 — Upstash Redis for the ledger, not in-process state
-**Decision.** Ledger, rate-limit counters and leads in Upstash Redis.
-**Alternatives.** In-memory module state; Vercel Postgres; a file; no persistence.
-**Why.** Serverless instances don't share memory. A per-instance counter under-counts spend
-by exactly the concurrency factor, which silently defeats the ceiling — the one thing the
-governor exists to guarantee. Redis gives atomic `INCRBYFLOAT` and TTL counters, which is
-precisely the primitive set needed and nothing more.
-**Trade-off.** A network round trip on the request path (~10-20ms) and an external
-dependency that can fail. The second is handled by fail-closed (ADR-006), which converts an
-availability problem into a degraded-but-honest experience.
+### ADR-002 — Supabase Postgres for the ledger, not in-process state
+**Decision.** Ledger, rate-limit counters and leads in **Supabase Postgres**, accessed over
+the PostgREST API. Two tables and one `governor_incr()` function (`architecture.md` §5).
+**Alternatives.** Upstash Redis (the original choice); in-memory module state; Vercel
+Postgres; a file; no persistence.
+**Why a shared store at all.** Serverless instances don't share memory. A per-instance
+counter under-counts spend by exactly the concurrency factor, silently defeating the ceiling
+the governor exists to guarantee.
+**Why Supabase over Redis.** This one is mostly operational and that is fine: the Supabase
+account already exists and the Upstash one did not. A store you must go create is not the
+simpler store, whatever its primitives look like. On the technical merits it is a wash —
+Postgres gives atomic increment-and-return in a single statement, which is the only
+primitive the governor needs, and the TTL semantics Redis provides for free are a six-line
+`on conflict` clause. Postgres pays some of that back: leads get real columns and
+constraints instead of a hash, and **RLS with no public policy** means a leaked anon key
+still cannot read the ledger or a single lead.
+**Access pattern.** PostgREST, never a direct Postgres connection. Serverless opens many
+short-lived connections; REST connections establish far faster and sidestep pool exhaustion.
+**Trade-off.** A network round trip on the request path and an external dependency that can
+fail — handled by fail-closed (ADR-006), which turns an availability problem into a
+degraded-but-honest experience. Postgres also has no native TTL, so expiry is expressed in
+the upsert rather than by the engine; an expired row resets in place, so there is no cleanup
+job to forget. And the free tier pauses after 7 days of inactivity — see R6.
+**What this validated.** The swap from Redis to Postgres touched the adapter and the config
+and nothing else. That is `LedgerStore` being a real port rather than a decorative one
+(ADR-005), and it is the cheapest possible evidence that the layering works.
 
 ---
 ### ADR-003 — Whole knowledge base in context; no RAG
@@ -84,11 +100,11 @@ the inline version can't be tested, and an untested ceiling isn't a ceiling.
 ### ADR-006 — Fail closed, with no escape hatch
 **Decision.** If spend can't be read or estimated, no model call happens.
 **Alternatives.** Fail open with a warning; fail open with a small per-instance allowance.
-**Why.** The asymmetry is total. Failing closed during a Redis outage costs a few hours of
+**Why.** The asymmetry is total. Failing closed during a store outage costs a few hours of
 degraded-but-working answers. Failing open costs the entire remaining budget in minutes,
 and the key **cannot be topped up** — that's an unrecoverable failure on a deliverable that
 must be live for a scheduled review.
-**Trade-off.** A Redis blip degrades a working bot to canned answers. Accepted, explicitly
+**Trade-off.** A store blip degrades a working bot to canned answers. Accepted, explicitly
 and permanently. The 400ms timeout counts as unavailability; there is no retry.
 
 ---
@@ -190,7 +206,7 @@ already re-reads prices and fails on >20% drift, which surfaces the common case.
 | R3 | **Deploy breaks near the review** | Medium | High | Deploy in Phase 2, then continuously; `/deploy-check` after every deploy; Vercel instant rollback to the last good deployment | A bad deploy at the wrong minute; rollback is <1 min |
 | R4 | **Public URL abused / scripted** | Medium | High | Per-IP 8/min + 80/day, per-session 6/min + 40 lifetime, 2,000-char message cap. 80/day/IP bounds one abuser to ~$0.50/day. Caps are re-derived whenever the model price changes | Distributed abuse across IPs; ceiling + fail-closed remain the backstop |
 | R5 | **API key leaked** | Low | Fatal | Env vars only; server-only handler; never in repo, history, logs, bundle or error text; `/verify` greps the staged diff and the full history | If leaked: revoke at OpenRouter immediately, rotate, redeploy. The $5 cap bounds the loss |
-| R6 | **Redis outage** | Low | Medium | Fail closed → STATIC. Bot stays up and honest | Degraded answers for the outage duration |
+| R6 | **Supabase outage, or free-tier project paused** | Low | Medium | Fail closed → STATIC; bot stays up and honest. The free tier pauses after **7 days of no activity** — exactly this key's lifespan — so `/deploy-check` verifies the project is awake, and `/api/health` touching the ledger resets the timer | Degraded answers for the outage duration |
 | R7 | **OpenRouter outage or model deprecation** | Low | Medium | Two models configured; any upstream failure → STATIC after one retry | Both Google models unavailable simultaneously → STATIC only |
 | R8 | **Prompt injection** | Medium | Low | Nothing to steal (no tools, no account access, no secrets in context) + structural data/instruction separation + output URL filter | Off-brand output; bounded by design, not by the model behaving |
 | R9 | **Prices move during the 7 days** | Low | Medium | `/deploy-check` re-reads prices and fails on >20% drift, forcing recalculation | Mid-window change between deploys |

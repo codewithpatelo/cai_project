@@ -21,7 +21,7 @@ Everything below exists to protect those two.
 |---|---|
 | Framework | Next.js 15, App Router, TypeScript strict |
 | Host | Vercel (Node runtime, SSE streaming) |
-| Store | Upstash Redis via Vercel Marketplace |
+| Store | Supabase Postgres, via the PostgREST API (never a direct connection) |
 | LLM | OpenRouter → `google/gemini-3.8-flash` (primary) / `google/gemini-3.1-flash-lite` (degraded). Pinned ids, never `~latest` aliases |
 | UI | Tailwind, no component library |
 | Tests | Vitest |
@@ -89,8 +89,9 @@ docs/                    Design docs. architecture · governor-spec · model-sel
 
 - TypeScript strict. No `any`. No non-null `!` — narrow properly.
 - Pure functions for anything testable; I/O only at the edges (route handlers, adapters).
-- Ports and adapters for external state: `LedgerStore` is an interface, Redis is one
-  implementation, memory is another. Tests use memory.
+- Ports and adapters for external state: `LedgerStore` is an interface, Supabase is one
+  implementation, memory is another. Tests use memory. Swapping the store must touch the
+  adapter and config only — if it reaches into `lib/governor/`, the port is leaking.
 - Errors: typed result objects across module boundaries, not thrown strings.
   **The user never sees a raw error** — everything degrades to the STATIC tier.
 - Named exports. No default exports except Next.js pages/routes.

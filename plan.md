@@ -45,8 +45,10 @@ Phases **1, 3 and 6** are mutually independent and are the designated parallel w
 - `.gitignore`: `.env*.local`, `.vercel`, `node_modules`, `.next`, `eval-results/`.
 - Commit `.env.example` (names only, no values).
 - `pnpm typecheck` / `lint` / `test` scripts wired; one trivial passing test.
-- Vercel project linked, Upstash Redis provisioned, `OPENROUTER_API_KEY` set **in Vercel
-  only** and in a local `.env.local` that is already gitignored.
+- Vercel project linked. Supabase project created and the schema from
+  `docs/architecture.md` §5 applied (two tables, one function, RLS on).
+- `OPENROUTER_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` set **in Vercel only** and in a
+  local `.env.local` that is already gitignored.
 
 **Files:** `package.json`, `tsconfig.json`, `.gitignore`, `.env.example`, `vitest.config.ts`
 
@@ -116,17 +118,17 @@ this plan file.
 
 **Tasks**
 - `types.ts`, `config.ts`, `ledger.ts` (`LedgerStore` port + `MemoryLedgerStore` +
-  `RedisLedgerStore` + `FailingStore`), `pacing.ts`, `tiers.ts`, `ratelimit.ts`,
+  `SupabaseLedgerStore` + `FailingStore` + `SlowStore`), `pacing.ts`, `tiers.ts`, `ratelimit.ts`,
   `telemetry.ts`, `index.ts` (`createGovernor`).
-- Injected clock and injected store. No direct `Date.now()`, no direct Redis import
-  outside the adapter.
+- Injected clock and injected store. No direct `Date.now()`, no Supabase import outside
+  the adapter.
 - Tests covering **every row of the §5 state table** plus E1–E11 in `docs/eval-set.md`:
   fail-closed, ×1.25 pessimistic estimate, all four rate limits, history trimming at both
   caps, first-turn-preserving summarisation, simulation read-only-ness, midnight reset.
 
 **Files:** `lib/governor/**` + `lib/governor/*.test.ts`
 
-**Done when:** `pnpm test` green with **zero network calls**; every state-table row has a
+**Done when:** `pnpm test` green with **zero network calls** (no Supabase in tests); every state-table row has a
 named test; `grep -ri cadre lib/governor/` returns nothing.
 
 **Commit:** `feat: budget governor with pacing, degradation and rate limits`

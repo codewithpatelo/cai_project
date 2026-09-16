@@ -50,8 +50,8 @@ Full table with escalation mappings: `kb/09-boundaries.md`.
 ## 2. Stack
 
 **Next.js 15 (App Router) + TypeScript on Vercel**, Node runtime, SSE streaming.
-Upstash Redis (Vercel Marketplace) for the governor ledger and leads. Tailwind for the UI.
-Vitest for tests.
+**Supabase Postgres** (via the PostgREST API) for the governor ledger and leads. Tailwind
+for the UI. Vitest for tests.
 
 Chosen because it is the fastest path from zero to a public HTTPS URL with streaming, it is
 the brief's own suggested default, and — the decisive reason — **Vercel's environment-variable
@@ -59,10 +59,16 @@ store is the only place the OpenRouter key ever lives.** Server-only route handl
 from `process.env` inside the handler, never in a `NEXT_PUBLIC_*` name, never in the bundle,
 never in the repo, never in a log line.
 
-Redis rather than in-process state because serverless instances do not share memory: a
-per-instance counter under-counts spend by exactly the concurrency factor, which defeats the
-entire ceiling. It is the simplest store that is *correct*, which is a different question
-from the simplest store.
+A shared store rather than in-process state because serverless instances do not share
+memory: a per-instance counter under-counts spend by exactly the concurrency factor, which
+defeats the entire ceiling. It is the simplest store that is *correct*, which is a different
+question from the simplest store.
+
+Supabase over Redis because it is the account that already exists (ADR-002). Postgres gives
+atomic increment-and-return in one statement, which is the only primitive the governor
+actually needs; the TTL semantics Redis provides for free are a six-line `on conflict` clause
+here. Access is over **PostgREST, never a direct Postgres connection** — serverless opens
+many short-lived connections and REST connections establish far faster.
 
 ## 3. Diagram
 
@@ -72,7 +78,7 @@ flowchart TD
 
     API --> RL["Rate limiter<br/>per-IP / per-session"]
     RL --> GOV["@budget-governor<br/>authorize()"]
-    GOV <--> LED[("Upstash Redis<br/>ledger · counters · leads")]
+    GOV <--> LED[("Supabase Postgres<br/>ledger · counters · leads")]
 
     GOV -->|"tier = STATIC"| STAT["Static FAQ responder<br/>keyword match over kb/<br/>$0, cannot fail"]
     GOV -->|"tier = PRIMARY / ECONOMY"| ASM["Prompt assembler<br/>fixed prefix + KB + trimmed history"]
@@ -153,15 +159,63 @@ for the team, no promised response time.
 
 ## 5. Data model
 
-Three keys in Redis. That is the entire persistence layer.
+Two tables and one function. That is the entire persistence layer.
 
-| Key | Type | TTL | Contents |
-|---|---|---|---|
-| `gov:spend:lifetime` | float (INCRBYFLOAT) | none | cumulative USD |
-| `gov:spend:day:{YYYY-MM-DD}` | float | 8 days | USD spent that day |
-| `gov:rl:{scope}:{hash}:{window}` | int | window | fixed-window counter |
-| `gov:telemetry` | list, capped 1000 | none | one JSON row per call (§8 of governor spec) |
-| `leads:{ulid}` | hash | 30 days | name, email, company, topic, urgency, ts |
+```sql
+-- Every counter the governor owns: lifetime spend, per-day spend, rate-limit
+-- windows. One shape, because they are all "a number that sometimes expires".
+create table governor_ledger (
+  key         text primary key,        -- 'spend:lifetime' | 'spend:day:2026-09-23'
+                                       -- | 'rl:ip:<hmac>:<window>'
+  value       double precision not null default 0,
+  expires_at  timestamptz              -- null = never
+);
+
+-- Atomic increment-and-return. An expired row resets in place rather than
+-- accumulating, so fixed-window rate limiting needs no cleanup job: a stale
+-- row is harmless and the next write past expires_at starts a fresh window.
+create function governor_incr(
+  p_key text, p_delta double precision, p_ttl_seconds int default null
+) returns double precision language plpgsql as $$
+declare v double precision;
+begin
+  insert into governor_ledger (key, value, expires_at)
+  values (p_key, p_delta,
+          case when p_ttl_seconds is null then null
+               else now() + make_interval(secs => p_ttl_seconds) end)
+  on conflict (key) do update set
+    value = case when governor_ledger.expires_at is not null
+                  and governor_ledger.expires_at < now()
+                 then excluded.value
+                 else governor_ledger.value + excluded.value end,
+    expires_at = case when governor_ledger.expires_at is not null
+                       and governor_ledger.expires_at < now()
+                      then excluded.expires_at
+                      else governor_ledger.expires_at end
+  returning value into v;
+  return v;
+end $$;
+
+create table leads (
+  id text primary key,                 -- ULID, surfaced to the user as a reference
+  name text, email text, company text,
+  topic text not null,
+  urgency text not null check (urgency in ('general','active_project','existing_client')),
+  created_at timestamptz not null default now()
+);
+
+-- RLS on, no public policies. Only the service-role key (server-side) reads or
+-- writes. The anon key cannot reach the ledger or a single lead even if it leaks.
+alter table governor_ledger enable row level security;
+alter table leads          enable row level security;
+```
+
+Telemetry (governor spec §8) is written as one JSON line to `console.log` for Vercel's log
+drain. It is deliberately **not** a table: it holds no user text, nothing queries it during a
+request, and a table would invite someone to start storing message content in it.
+
+Leads are pruned by a scheduled delete at 30 days. If the schedule doesn't run, nothing
+breaks — it is hygiene, not correctness.
 
 **Not persisted, on purpose:**
 - Conversation transcripts. History lives in the browser's `sessionStorage` and in the
@@ -171,8 +225,8 @@ Three keys in Redis. That is the entire persistence layer.
 - Any user text in telemetry — structurally impossible, see governor spec §8.
 
 Leads are the one place PII is stored, because the user deliberately typed it and asked for
-it to be passed on. 30-day TTL, minimal fields, no tracking identifiers, and the UI says so
-before the user types.
+it to be passed on. 30-day retention, minimal fields, no tracking identifiers, and the UI
+says so before the user types.
 
 ## 6. Separation of concerns
 
@@ -207,10 +261,11 @@ for an hour of work. Per-IP daily cap probably needs raising off 120.
 
 **At 10,000 conversations/day (~$135/day).**
 Now things actually change:
-- **Ledger contention.** `INCRBYFLOAT` on one key at ~7 writes/sec is still fine, but the
+- **Ledger contention.** A single-row `UPDATE … RETURNING` at ~7 writes/sec is fine, but
+  every writer serialising on one row is a bad shape at 10× that, and the
   read-before-authorize becomes the hot path. Move to a per-instance token-bucket that
-  leases budget in $0.50 chunks from Redis, reconciling every 30 s — amortises the round
-  trip and keeps the fail-closed property at the lease level.
+  leases budget in $0.50 chunks, reconciling every 30 s — amortises the round trip, removes
+  the hot row, and keeps the fail-closed property at the lease level.
 - **Rate limiting** moves to the edge (Vercel Edge Middleware / Cloudflare) so abusive
   traffic never reaches a function invocation. Fixed windows become sliding.
 - **Caching earns its keep**: a semantic cache on normalised questions plausibly serves
@@ -219,8 +274,8 @@ Now things actually change:
 - **KB grows** past what belongs in every request. *This* is where RAG becomes correct:
   route to 2–3 topic files, keep the boundaries/escalation block always-resident so
   refusals never degrade.
-- **Telemetry** leaves Redis for a real sink (ClickHouse / Tinybird); a capped list is a
-  demo affordance, not a datastore.
+- **Telemetry** leaves `console.log` for a real sink (ClickHouse / Tinybird); a log drain is
+  a demo affordance, not a datastore.
 - **Leads** go to a queue with a CRM consumer and a dead-letter path, because at that volume
   a dropped lead is revenue.
 - **Human handoff** becomes real — routing to a live channel with hours and an SLA — which

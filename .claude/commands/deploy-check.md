@@ -5,7 +5,8 @@ description: Pre- and post-deploy verification of the public URL. Run before eve
 ## Before deploying
 1. `/verify` is green.
 2. Env vars set **in Vercel** (not just locally): `OPENROUTER_API_KEY`,
-   `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `TELEMETRY_SALT`,
+   `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (service role, **not** anon, and not
+   `NEXT_PUBLIC_`), `TELEMETRY_SALT`,
    `GOVERNOR_TOTAL_BUDGET_USD`, `GOVERNOR_RESERVE_USD`, `GOVERNOR_RESERVE_WINDOW_*`,
    `GOVERNOR_KEY_EXPIRES_AT`.
 3. `GOVERNOR_SIM_ENABLED` is **unset** in production. A simulated budget in production is a
@@ -45,6 +46,13 @@ Set `GOVERNOR_SIM_ENABLED=true` + `GOVERNOR_SIM_SPENT_USD=4.10`, redeploy previe
 - Tier badge reads STATIC, simulated badge shown.
 - `/api/health` reports `simulated:true`.
 Then unset both and confirm PRIMARY returns.
+
+## Supabase checks
+- `governor_ledger`, `leads` and `governor_incr` exist; RLS is **on** with no public policy.
+- The Supabase project is **not paused**. The free tier pauses after 7 days of no activity,
+  and this key's whole life is 7 days. `/api/health` touches the ledger, so running
+  `/deploy-check` resets the timer — but verify the dashboard before review day rather
+  than assuming.
 
 ## Record
 Paste the live URL into `plan.md` Phase 2 and note the deploy time. If anything above

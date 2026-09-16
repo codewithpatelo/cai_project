@@ -24,7 +24,7 @@ KB, or the prompt — if the wiring needs to change, report the interface you ne
 3. **Tests are not optional and are never skipped.** No `.skip`, no `.only`, no TODO tests.
    Every row of the state table in spec §5 gets a named test.
 4. **No network in tests.** Injected clock, injected store. If a test needs a real clock or
-   real Redis, the design is wrong — fix the design.
+   a real database, the design is wrong — fix the design.
 5. **Estimates are pessimistic.** Fallback cost estimates are multiplied by 1.25. Don't
    "correct" this; an under-estimate spends money we think we still have.
 
