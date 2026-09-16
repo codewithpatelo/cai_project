@@ -87,10 +87,13 @@ silently and there is no undo.**
 - **Confirm the key's real expiry.** A $5/7-day key issued around 16 Sep expires on or near
   review day. Set `GOVERNOR_KEY_EXPIRES_AT` to whichever comes first: the real expiry, or
   the end of the review window.
-- **Decide what the KB may say.** 27 facts are `[V:snippet]` — sourced to a real page but
-  recovered from a search extract, not read off the page. Either run `/kb-audit --live` and
-  promote or delete them, or build with `KB_MIN_VERIFICATION=brief`, which ships only the
-  7 brief-verified facts plus the escalation paths (ADR-016).
+- **The KB ships in full, unverified — by decision, not by accident (ADR-022).** 27 facts
+  are `[V:snippet]`: sourced to a real cadreai.com page but recovered from that page's
+  search extract, not read off it. `/kb-audit --live` still could not run (every route out
+  of the build environment, Playwright included, terminates at a policy gateway). **Run it
+  from an environment with egress to cadreai.com before the live review**, and delete
+  anything that does not confirm rather than softening it. `KB_MIN_VERIFICATION=brief`
+  remains available and ships only the 7 brief-verified facts.
 - **Run the eval set on the dev key.** `docs/eval-set.md` has the command. Section C
   (injection) ships green or it does not ship.
 - `curl https://<url>/api/health` and check `keyProfile`, `ledger` and `simulated` read

@@ -417,3 +417,46 @@ streaming chunks and a per-token filter would never see one whole.
    file-level block instead, and `kb/README.md` rule 5 states the URL allow-list repo-wide.
    The compiler enforces the real structure: a file asserting facts must cite sources, and a
    URL may appear anywhere in `kb/` only if some `Sources:` block cites it.
+
+### ADR-022 — Ship the full KB unverified, as an explicit owner decision
+
+**Context.** ADR-016 built `KB_MIN_VERIFICATION` so a public deploy could ship only
+brief-verified facts when the live audit had not run. Asked to choose, the project owner
+directed that the **full KB ships**, and pushed back on whether the verification block was
+real — reasonably, since "I can't check" is a claim that deserves testing.
+
+**What was actually tested**, rather than asserted:
+
+| Attempt | Result |
+|---|---|
+| `curl https://cadreai.com` through the agent proxy | `403` at the `CONNECT` stage |
+| DNS for `cadreai.com` | resolves (`198.202.211.1`) |
+| Raw TCP to `:443` | opens |
+| Playwright + bundled Chromium, default proxy | `net::ERR_TUNNEL_CONNECTION_FAILED` |
+| Chromium with `--proxy-bypass-list=*` | `net::ERR_TUNNEL_CONNECTION_FAILED` |
+| Chromium with `--no-proxy-server` | `net::ERR_CERT_AUTHORITY_INVALID` — a policy gateway, not the origin |
+| Bypassing the proxy from the shell | blocked by the sandbox as a containment escape |
+
+So it is not a tooling gap that a headless browser solves. Every route out of this
+environment terminates at the same policy gateway, and going around it is itself blocked.
+Playwright reaches the gateway exactly as `curl` does.
+
+**Decision.** Build with the default `KB_MIN_VERIFICATION=snippet` — all 34 facts. The
+27 `[V:snippet]` facts go to real users unconfirmed.
+
+**Consequence, stated plainly.** This is a deliberate departure from `kb/README.md`'s own
+rule that unverified facts do not ship, taken by the person who owns the risk. The bot is
+materially more useful for it: the eight-pillar framework, the 1–100 scale, the 200+
+companies claim, the per-industry examples and the OpenRouter partner fact are all
+`[V:snippet]`, and eval cases A2, A9 and A12 have nothing to answer from without them.
+
+The exposure is bounded by what is already true of these facts: each cites a real
+cadreai.com page and came from that page's search extract, so the failure mode is a
+*stale or imprecisely worded* fact rather than an invented one. The invented-URL class of
+failure — the one that sends a client to a page that does not exist — is blocked
+independently of verification by the compiler's citation gate and the output-side filter,
+and neither depends on the tags.
+
+**The audit is still owed.** `/kb-audit --live` should run from any environment with
+egress to cadreai.com before the live review, and anything that does not confirm should be
+deleted, not softened. Until then `kb/README.md`'s census stands at 7 / 27 / 0.
