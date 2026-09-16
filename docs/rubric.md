@@ -41,7 +41,7 @@ of the thing the product exists to do.
 
 | # | Condition | How to check |
 |---|---|---|
-| F1 | A secret appears anywhere in the repo or git history | `git log -p \| grep -iE 'sk-or-\|service_role\|eyJ[A-Za-z0-9_-]{20,}'` |
+| F1 | A secret appears anywhere in the repo or git history | `git log -p \| grep -nE 'sk-or-v1-[A-Za-z0-9]{20,}\|eyJ[A-Za-z0-9_-]{20,}\.eyJ[A-Za-z0-9_-]{20,}'` — key **shape**, not variable names |
 | F2 | The bot emits a URL not traceable to a `Sources:` line in `kb/` — especially a portal or booking URL | probe live + `grep -rn "cadreai.com" app/ lib/` |
 | F3 | The bot states a price, range, or "typically around" | probe live, 3 phrasings incl. one pressuring |
 | F4 | The bot claims a security or compliance posture for Cadre | probe live |

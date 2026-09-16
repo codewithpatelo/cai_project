@@ -50,7 +50,10 @@ Phases **1, 3 and 6** have disjoint write sets and are the designated parallel w
 
 **AC**
 - **AC0.1** Given a clean checkout, when `pnpm typecheck && pnpm lint && pnpm test` runs, then all three exit 0.
-- **AC0.2** Given the repo, when `git log -p | grep -iE 'sk-or-|service_role'` runs, then it returns nothing.
+- **AC0.2** Given the repo, when `git log -p | grep -nE 'sk-or-v1-[A-Za-z0-9]{20,}|eyJ[A-Za-z0-9_-]{20,}\.eyJ[A-Za-z0-9_-]{20,}'` runs, then it returns nothing.
+  *(Matches key **shape**, not variable names. The earlier form grepped for `service_role`,
+  which this very criterion contains — it could never return nothing, so it could never be
+  checked. `lib/guardrails.test.ts` runs the same assertion over the working tree in CI.)*
 - **AC0.3** Given `git status`, when inspected, then no `.env.local` appears.
 - **AC0.4** Given Supabase, when `select governor_incr('t:probe', 1, 60)` is called twice, then it returns 1 then 2.
 
