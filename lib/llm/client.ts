@@ -216,13 +216,16 @@ export async function* ssePayloads(
 /**
  * Read the key at call time, server-side only. It is never passed in or logged.
  *
- * One variable name across providers: the deployment sets LLM_PROVIDER to say
- * which service the key belongs to. Two names would let a DeepSeek key sit in
- * the OpenRouter variable and fail confusingly at request time.
+ * Tries the active provider's conventional variable first, then the generic one,
+ * so a key provisioned by a platform integration under the vendor's own name
+ * works without renaming it.
  */
-function apiKey(): string | null {
-  const key = process.env.OPENROUTER_API_KEY
-  return key && key.length > 0 ? key : null
+function apiKey(names: string[]): string | null {
+  for (const name of names) {
+    const value = process.env[name]
+    if (value && value.length > 0) return value
+  }
+  return null
 }
 
 /**
@@ -235,12 +238,15 @@ function apiKey(): string | null {
 export async function* streamCompletion(
   req: StreamRequest,
 ): AsyncGenerator<StreamEvent, StreamOutcome> {
-  const key = apiKey()
+  const provider = activeProvider()
+  const key = apiKey(provider.keyEnvNames)
   if (key === null) {
-    return { ok: false, error: { kind: 'no_key', detail: 'OPENROUTER_API_KEY is not set' } }
+    return {
+      ok: false,
+      error: { kind: 'no_key', detail: `no key set for provider "${provider.id}"` },
+    }
   }
 
-  const provider = activeProvider()
   const startedAt = Date.now()
   let response: Response
 

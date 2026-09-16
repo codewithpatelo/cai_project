@@ -73,3 +73,51 @@ describe('prices are never invented for an unverified provider', () => {
     }
   })
 })
+
+describe('a key provisioned under the vendor name is found', () => {
+  it('accepts DEEPSEEK_API_KEY for DeepSeek, before the generic name', () => {
+    // Platform integrations provision the vendor's own variable. Insisting on
+    // the generic name turns a working setup into a silent "no key".
+    expect(activeProvider({ LLM_PROVIDER: 'deepseek' }).keyEnvNames[0]).toBe('DEEPSEEK_API_KEY')
+    expect(activeProvider({ LLM_PROVIDER: 'deepseek' }).keyEnvNames).toContain('OPENROUTER_API_KEY')
+  })
+
+  it('does not let an OpenRouter deployment pick up a DeepSeek key', () => {
+    expect(activeProvider({ LLM_PROVIDER: 'openrouter' }).keyEnvNames).toEqual(['OPENROUTER_API_KEY'])
+  })
+})
+
+describe('the provider is inferred when LLM_PROVIDER is unset', () => {
+  it('infers DeepSeek from a DeepSeek key alone', () => {
+    // Guessing wrong here sends a Gemini model id to DeepSeek and fails in a way
+    // that reads like a bad key.
+    expect(activeProvider({ DEEPSEEK_API_KEY: 'x' }).id).toBe('deepseek')
+  })
+
+  it('keeps OpenRouter when both keys are present', () => {
+    expect(activeProvider({ DEEPSEEK_API_KEY: 'x', OPENROUTER_API_KEY: 'y' }).id).toBe('openrouter')
+  })
+
+  it('lets an explicit LLM_PROVIDER override the inference', () => {
+    expect(activeProvider({ LLM_PROVIDER: 'openrouter', DEEPSEEK_API_KEY: 'x' }).id).toBe('openrouter')
+  })
+})
+
+describe('the default model follows the provider', () => {
+  it('uses a DeepSeek model id on DeepSeek', () => {
+    // Sending google/gemini-3.8-flash to api.deepseek.com is an obvious failure
+    // that is not obvious at all when you are reading a 400 from a provider.
+    expect(primaryTier({ LLM_PROVIDER: 'deepseek' }).id).toBe('deepseek-chat')
+    expect(economyTier({ LLM_PROVIDER: 'deepseek' }).id).toBe('deepseek-chat')
+  })
+
+  it('still lets MODEL_PRIMARY override it', () => {
+    expect(primaryTier({ LLM_PROVIDER: 'deepseek', MODEL_PRIMARY: 'deepseek-reasoner' }).id).toBe('deepseek-reasoner')
+  })
+
+  it('prices an uncaptured DeepSeek model pessimistically', () => {
+    // We could reach no pricing page, so the rate is the most expensive one we
+    // did capture. That degrades the bot early rather than overspending.
+    expect(primaryTier({ LLM_PROVIDER: 'deepseek' }).inputPerMTok).toBe(1.0)
+  })
+})

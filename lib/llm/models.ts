@@ -13,6 +13,7 @@
  */
 
 import type { ModelTier } from '../governor/types'
+import { defaultModels } from './provider'
 
 /**
  * Just the shape these functions read. Narrower than NodeJS.ProcessEnv on
@@ -83,13 +84,13 @@ function tier(id: string): ModelTier {
 }
 
 export function primaryTier(env: EnvLike = process.env): ModelTier {
-  const id = env.MODEL_PRIMARY ?? PRIMARY_ID
+  const id = env.MODEL_PRIMARY ?? defaultModels(env).primary
   const override = priceOverride(env, 'PRIMARY')
   return override === null ? tier(id) : { id, ...override }
 }
 
 export function economyTier(env: EnvLike = process.env): ModelTier {
-  const id = env.MODEL_ECONOMY ?? ECONOMY_ID
+  const id = env.MODEL_ECONOMY ?? defaultModels(env).economy
   const override = priceOverride(env, 'ECONOMY')
   return override === null ? tier(id) : { id, ...override }
 }
