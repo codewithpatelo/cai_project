@@ -65,7 +65,47 @@ select governor_incr('t:probe', 1, 60);
 select governor_incr('t:probe', 1, 60);
 ```
 
-### 2. Vercel
+### 2. Vercel — from the CLI, no GitHub connection needed
+
+Linking a git repository requires a GitHub Login Connection on the Vercel account, and a
+GitHub account can only be connected to one Vercel account at a time. If that connection
+already belongs to another Vercel account, **do not move it** — deploy from the CLI
+instead. The CLI uploads the working tree directly and needs only a Vercel login; the git
+connection exists for auto-deploy on push, which this project does not require.
+
+```bash
+git checkout claude/design-build-handoff-jpyrjr
+pnpm install
+npx vercel login          # pick the Vercel account this should live in
+npx vercel link           # create or select the project, e.g. cadre-ai-support-bot
+```
+
+Then set the environment variables. Paste your own values; nothing here is committed.
+
+```bash
+# Which provider the key belongs to, and the key itself.
+npx vercel env add LLM_PROVIDER preview            # deepseek
+npx vercel env add OPENROUTER_API_KEY preview      # the DEV key, never the client's
+npx vercel env add OPENROUTER_KEY_PROFILE preview  # dev
+
+# Pin the model and its real per-token rates, read off the provider's pricing page.
+npx vercel env add MODEL_PRIMARY preview                  # deepseek-chat
+npx vercel env add MODEL_PRIMARY_INPUT_PER_MTOK preview
+npx vercel env add MODEL_PRIMARY_OUTPUT_PER_MTOK preview
+
+# The ledger. Without these the governor fails closed and every answer is STATIC.
+npx vercel env add SUPABASE_URL preview
+npx vercel env add SUPABASE_SERVICE_ROLE_KEY preview
+npx vercel env add TELEMETRY_SALT preview          # 32+ random bytes
+
+npx vercel                 # preview deployment
+```
+
+Deploy to production only with the client key and `OPENROUTER_KEY_PROFILE=client`
+(ADR-014). A preview left on the client key drains a $5 budget that cannot be regenerated,
+and there is no undo.
+
+### 2b. Vercel — git-linked (only if the GitHub connection is free)
 
 Create a project from this repository. Set environment variables **per environment** — the
 split is the point, not a formality (ADR-014):
