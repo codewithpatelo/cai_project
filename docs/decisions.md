@@ -460,3 +460,39 @@ and neither depends on the tags.
 **The audit is still owed.** `/kb-audit --live` should run from any environment with
 egress to cadreai.com before the live review, and anything that does not confirm should be
 deleted, not softened. Until then `kb/README.md`'s census stands at 7 / 27 / 0.
+
+### ADR-023 — DeepSeek as a fallback provider, and what it costs in accounting
+
+**Context.** ADR-004 and ADR-013 pin `google/gemini-3.8-flash` and
+`google/gemini-3.1-flash-lite` on OpenRouter. The only development key available is a
+**DeepSeek** key, so the deployment needs a second provider.
+
+**Decision.** Add `lib/llm/provider.ts` and rename `openrouter.ts` to `client.ts`. Both
+providers speak the same OpenAI-compatible chat-completions dialect, so only the endpoint,
+the attribution headers and cost reporting differ. OpenRouter remains the default and an
+unrecognised `LLM_PROVIDER` falls back to it rather than failing at request time.
+
+This is the layering claim in `docs/architecture.md` §6 — "swapping OpenRouter for a direct
+client should touch exactly one file" — being tested for real rather than asserted. It held:
+the governor, the prompt assembly, the route and the UI are unchanged.
+
+**Consequence, and it is a real one.** **DeepSeek does not return a cost in its usage
+block.** OpenRouter does, which is what `governor-spec.md` §2 is built around. On DeepSeek
+every call is priced from configured per-token rates and recorded as
+`costSource: 'estimated'`, with the pessimistic 1.25x multiplier. The governor still paces,
+degrades and fails closed exactly as specified, and erring high degrades the bot early
+rather than overspending — but the ledger becomes our estimate rather than the provider's
+number, and reconciliation against `/api/v1/generation` (an OpenRouter endpoint) is not
+available. Accept that, or run the demo on OpenRouter.
+
+**DeepSeek's prices are not hardcoded.** This build had no egress to any pricing page, and
+inventing a plausible rate is the same failure the knowledge base exists to prevent — except
+here a wrong number silently under-counts real money. Rates come from
+`MODEL_PRIMARY_INPUT_PER_MTOK` / `MODEL_PRIMARY_OUTPUT_PER_MTOK` (and the ECONOMY pair),
+**which must be set from the provider's live pricing page**. Unset, an unknown model falls
+back to the most expensive captured rates ($1.00 / $5.00 per Mtok).
+
+A test caught the sharp edge here: `Number('')` is `0`, and Vercel writes an unset variable
+as an empty string, so a half-configured override would have priced input at zero and
+under-counted spend. An empty value is now absent, not free, and both rates are required
+together.

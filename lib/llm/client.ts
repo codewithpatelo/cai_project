@@ -1,10 +1,14 @@
 /**
- * The only file in the codebase that knows OpenRouter exists.
+ * The only file in the codebase that knows which LLM provider exists.
  *
- * Swapping to a direct Anthropic or Google client should touch this file and
- * nothing else -- that is the test of the layering in docs/architecture.md §6.
- * It returns a token stream plus a normalised CallUsage; callers never see an
- * OpenRouter-shaped object.
+ * Swapping providers should touch this file and nothing else -- that is the test
+ * of the layering in docs/architecture.md §6, and adding DeepSeek as a fallback
+ * was that test being run for real (ADR-023). It returns a token stream plus a
+ * normalised CallUsage; callers never see a provider-shaped object.
+ *
+ * Both supported providers speak the same OpenAI-compatible chat-completions
+ * dialect, so only the endpoint, the headers and cost reporting differ; those
+ * live in provider.ts.
  *
  * Cost accounting, per docs/governor-spec.md §2: OpenRouter includes usage
  * accounting on every chat completion with no extra parameter -- the legacy
@@ -16,8 +20,7 @@
  */
 
 import type { CallUsage, Tier, ModelTier } from '../governor/types'
-
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
+import { activeProvider } from './provider'
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
@@ -72,9 +75,12 @@ export type StreamOutcome =
 interface RawUsage {
   prompt_tokens?: number
   completion_tokens?: number
+  /** OpenRouter reports real cost here. DeepSeek does not send this field at all. */
   cost?: number
   prompt_tokens_details?: { cached_tokens?: number }
   completion_tokens_details?: { reasoning_tokens?: number }
+  /** DeepSeek's spelling of the cache-hit count. */
+  prompt_cache_hit_tokens?: number
 }
 
 interface RawChunk {
@@ -143,7 +149,7 @@ export function normalizeUsage(args: {
 
   const inputTokens = raw?.prompt_tokens ?? args.fallbackInputTokens
   const outputTokens = raw?.completion_tokens ?? args.fallbackOutputTokens
-  const cachedInputTokens = raw?.prompt_tokens_details?.cached_tokens ?? 0
+  const cachedInputTokens = raw?.prompt_tokens_details?.cached_tokens ?? raw?.prompt_cache_hit_tokens ?? 0
   const reasoningTokens = raw?.completion_tokens_details?.reasoning_tokens
 
   // A reported cost of exactly 0 is treated as "not reported". A real call is
@@ -207,7 +213,13 @@ export async function* ssePayloads(
   }
 }
 
-/** Read the key at call time, server-side only. It is never passed in or logged. */
+/**
+ * Read the key at call time, server-side only. It is never passed in or logged.
+ *
+ * One variable name across providers: the deployment sets LLM_PROVIDER to say
+ * which service the key belongs to. Two names would let a DeepSeek key sit in
+ * the OpenRouter variable and fail confusingly at request time.
+ */
 function apiKey(): string | null {
   const key = process.env.OPENROUTER_API_KEY
   return key && key.length > 0 ? key : null
@@ -228,18 +240,17 @@ export async function* streamCompletion(
     return { ok: false, error: { kind: 'no_key', detail: 'OPENROUTER_API_KEY is not set' } }
   }
 
+  const provider = activeProvider()
   const startedAt = Date.now()
   let response: Response
 
   try {
-    response = await fetch(OPENROUTER_URL, {
+    response = await fetch(provider.baseUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
-        // Attribution only; both are safe to be public.
-        'HTTP-Referer': process.env.OPENROUTER_APP_URL ?? '',
-        'X-Title': process.env.OPENROUTER_APP_TITLE ?? '',
+        ...provider.extraHeaders,
       },
       body: JSON.stringify({
         model: req.model,

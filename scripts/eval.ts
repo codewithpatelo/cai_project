@@ -19,7 +19,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { assemble } from '../lib/prompt/assemble'
 import { COMPILED_KB } from '../lib/kb/kb.generated'
-import { streamCompletion } from '../lib/llm/openrouter'
+import { streamCompletion } from '../lib/llm/client'
 import { primaryTier } from '../lib/llm/models'
 import { filterUrls } from '../lib/chat/url-filter'
 

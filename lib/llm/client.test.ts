@@ -5,7 +5,7 @@ import {
   estimateCostUsd,
   ssePayloads,
   ESTIMATE_PESSIMISM,
-} from './openrouter'
+} from './client'
 import type { ModelTier } from '../governor/types'
 
 /**

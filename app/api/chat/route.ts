@@ -13,7 +13,7 @@
 
 import { assemble } from '@/lib/prompt/assemble'
 import { COMPILED_KB } from '@/lib/kb/kb.generated'
-import { streamCompletion } from '@/lib/llm/openrouter'
+import { streamCompletion } from '@/lib/llm/client'
 import { createGovernor, SupabaseLedgerStore } from '@/lib/governor'
 import type { Decision, Tier } from '@/lib/governor/types'
 import { governorConfigFromEnv, supabaseConfigFromEnv } from '@/lib/chat/governor-config'
