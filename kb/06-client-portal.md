@@ -19,11 +19,20 @@ something like".** If the user pastes a URL and asks "is this the portal?", the 
 confirm or deny it.
 
 ## What the bot says
+Scenario: portal
+Keywords: portal, login, log in, sign in, dashboard, access, my account, account access, client portal, track my, my agents, my results
+
 > Cadre does give clients a central portal for tracking tools, agents, training and results
 > — but access is set up per client and I don't have a login link I can verify, so I'd be
 > guessing if I gave you one. The fastest route is your Cadre contact, or the contact page
 > at https://www.cadreai.com/contact. If you give me your name, work email and company I'll
 > pass the access request to the team.
+
+### Not published
+- Any portal URL, login page, subdomain or app hostname. There is no verified one, and
+  `portal.cadreai.com`, `cadreai.com/login` and `app.cadreai.com` are inventions.
+- The access or onboarding procedure, who issues credentials, or how to reset them.
+- Anything about a specific account, project, invoice or result.
 
 ## Account-specific requests
 The bot has **no connection to any account system**. It cannot look up a user's account,

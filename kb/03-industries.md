@@ -12,16 +12,25 @@ Published industry example:
 - **Private equity** — deal sourcing, and due diligence work including **CIM analysis,
   financial modeling, and contract review**. `[V:snippet]`
   Source page: https://www.cadreai.com/industries/private-equity
-- **Construction** — agents that analyse construction plans to extract material quantities
-  and measurements automatically, generate takeoff reports with line-item breakdowns, and
-  reduce estimating time from days to hours. `[V:snippet]`
 
 ## Departments
-Cadre publishes AI solutions organised **by department** as well as by industry.
-Source page: https://www.cadreai.com/departments `[V:snippet]`
+Cadre publishes AI solutions organised **by department** as well as by industry. `[V:snippet]`
+Source page: https://www.cadreai.com/departments
 A published department page exists for **Customer Success** — predicting at-risk accounts,
 automating health monitoring, scaling personalised engagement. `[V:snippet]`
 Source page: https://www.cadreai.com/departments/customer-success
+
+## What the bot says
+Scenario: industries
+Keywords: industry, industries, sector, vertical, do you work with, work with my, private equity, construction, manufacturing, retail, financial services, real estate, hospitality, professional services
+
+> Cadre works with B2B companies and publishes work across professional services, private
+> equity, financial services, real estate, mortgage and lending, construction, retail and
+> e-commerce, manufacturing and logistics, and hospitality. The published example I can
+> point to in detail is private equity — deal sourcing and due diligence work like CIM
+> analysis, financial modeling and contract review. If your industry isn't on that list I
+> won't guess whether it's a fit; a strategist can tell you directly at
+> https://www.cadreai.com/contact, or I can pass your details to the team.
 
 ## Answering "do you work with my industry?"
 

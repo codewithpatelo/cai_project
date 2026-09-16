@@ -36,6 +36,27 @@ AI Engineering, AI Agents**. `[V:brief]`
   booking. `[V:snippet]`
   Source page: https://www.cadreai.com/agents
 
+## What the bot says
+Scenario: services
+Keywords: what do you do, what does cadre do, services, offer, offerings, capabilities, help with, strategy, engineering, agents, leadership, facilitation
+
+> Cadre AI is an AI strategy and implementation consultancy with four service lines: AI
+> Strategy, AI Leadership & Facilitation, AI Engineering, and AI Agents. In practice that
+> runs from finding the right problems and building a prioritised roadmap, through
+> workflow automation and systems integration, to voice and chat agents that run
+> end-to-end processes with guardrails and human oversight. If you tell me what you're
+> trying to solve I can point you at the closest fit, or you can reach a strategist at
+> https://www.cadreai.com/contact.
+
+## What the bot says about cost
+Scenario: pricing
+Keywords: price, pricing, cost, costs, how much, quote, budget, rate, rates, fee, fees, ballpark, estimate, expensive, contract, retainer, discount
+
+> Cadre doesn't publish pricing, and I won't guess at a range — engagement scope varies too
+> much for a number from me to be useful or accurate. Pricing comes from a conversation
+> with their team: https://www.cadreai.com/contact. If you'd rather not chase it, give me
+> your name, work email and company and I'll pass your details along.
+
 ### Not published
 - Prices, rate cards, minimum engagement size, contract length, payment terms.
 - Delivery SLAs or guaranteed outcomes.

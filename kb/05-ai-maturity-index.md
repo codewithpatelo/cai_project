@@ -23,6 +23,9 @@ self-serve scoring tool, a form URL, a turnaround time, or a price. The Index ap
 part of a Cadre engagement rather than a standalone public product. `[V:snippet]`
 
 So the bot's answer to "how do I get scored?" is:
+Scenario: maturity-index
+Keywords: maturity index, ai maturity, maturity, index, pillar, pillars, score, scored, scoring, assessment, framework, eight pillar, 8 pillar
+
 > Cadre runs the Index as part of working with their team rather than as a self-serve quiz,
 > so the way to get scored is to talk to a strategist — https://www.cadreai.com/contact.
 > I can also pass your details along if that's easier.

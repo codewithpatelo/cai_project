@@ -37,8 +37,20 @@ the KB may have grown in between.
 Any `[V:snippet]` fact that cannot be confirmed on the live page is **deleted**, not
 softened. The bot loses a fact; it does not gain a guess.
 
-**Current counts (design pass, 2026-09-16):** 8 `[V:brief]` · 31 `[V:snippet]` ·
+**Current counts (audited 2026-09-16):** 7 `[V:brief]` · 27 `[V:snippet]` ·
 **0 `[V:live]`**. Every snippet fact is unverified until the live audit runs.
+
+An earlier note claimed 8 / 31 / 0. That was wrong on all three numbers; an offline
+audit counted the tags. Two corrections came out of it:
+
+- The **Construction** bullet in `03-industries.md` claimed agents that extract material
+  quantities from plans and "reduce estimating time from days to hours". It carried
+  `[V:snippet]` but cited no page, and no construction page appears in the inventory below.
+  It was **deleted**. Construction survives as an industry Cadre names, which is
+  `[V:brief]` and needs no page.
+- A tag only counts when it **ends a line**. `04-getting-started.md` mentions `[V:live]`
+  mid-sentence while explaining this convention; that is prose, not a verified fact, and
+  the compiler does not treat it as one.
 
 ## Page inventory discovered (all `[V:snippet]`, 2026-09-16)
 

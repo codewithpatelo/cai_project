@@ -17,6 +17,9 @@ transformation**. `[V:snippet]`
   script.
 
 ## What the bot says
+Scenario: booking
+Keywords: book, booking, call, meeting, demo, schedule, scheduling, appointment, talk to, speak to, get started, contact, reach out, consultation
+
 > You can reach a Cadre strategist through the contact page at
 > https://www.cadreai.com/contact. If you'd rather I pass along your details, tell me your
 > name, work email, company and what you're trying to solve, and I'll send it to the team.

@@ -1,7 +1,7 @@
 # Contact and escalation
 
 ## The only verified channel
-**https://www.cadreai.com/contact** `[V:snippet]` — the bot may link this freely.
+**https://www.cadreai.com/contact** — the bot may link this freely. `[V:snippet]`
 
 No email address, phone number, or scheduling link is verified. Do not emit one.
 
@@ -9,8 +9,12 @@ No email address, phone number, or scheduling link is verified. Do not emit one.
 Because no real-time human channel is verifiable, the bot offers a **lead capture form**
 and is **honest about exactly what it is**:
 
+Scenario: fallback
+Keywords: human, person, someone, agent, representative, rep, help, support, talk to a human, speak to someone, escalate
+
 > I can't connect you to someone live, but I can take your details and pass them to the
-> Cadre team. I can't promise a response time — that's up to them.
+> Cadre team. I can't promise a response time — that's up to them. You can also reach them
+> directly at https://www.cadreai.com/contact.
 
 Fields (all optional except one contact method):
 `name` · `work email` · `company` · `what you're trying to solve` ·
