@@ -14,7 +14,34 @@ defaults this kind of app drifts into: purple-blue gradients, glassmorphism, emo
 bouncing avatar, Inter. A serif display face over a plain sans, on warm paper, reads as a
 firm rather than a demo.
 
-## Tokens
+## Token architecture — read this before writing a single colour
+
+**The mocks carry literal hex values. The app must not.**
+
+`.dc.html` files need literal hexes because the canvas format paints them inline. If the
+build copies those hexes into components, **dark mode becomes impossible without touching
+every file** — and this is exactly the mistake that looks harmless for two hours and then
+costs a rewrite.
+
+The app defines every token once, as CSS custom properties, and components reference
+`var(--*)` and nothing else:
+
+```css
+:root {                      /* light, and the default */
+  --surface: #FBFAF7;  --raised: #FFFFFF;  --ink: #1A1D1A;
+  --ink-muted: #4F554F; --ink-subtle: #6B726B; --border: #E3E1DA;
+  --accent: #2F5D50;   --accent-soft: #EAF0ED; --on-accent: #FFFFFF;
+  --warn: #8A5616;     --warn-soft: #F6EEE3;
+  --neutral: #5C625C;  --neutral-soft: #EFEEE9;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { /* dark values */ } }
+:root[data-theme="dark"] { /* dark values */ }
+```
+
+**A hardcoded hex anywhere in `app/` is a bug**, catchable with a grep and worth one in
+`/verify`.
+
+## Tokens — light
 
 ```
 Surface       #FBFAF7   warm paper, page ground
@@ -33,6 +60,62 @@ Neutral soft  #EFEEE9
 
 Green rather than blue: blue is the default every chatbot reaches for, and green reads
 closer to Cadre's own site without imitating it.
+
+## Tokens — dark
+
+Not the light palette inverted. Dark surfaces keep the same warm cast, and **the accent
+gets lighter**, because a deep green that reads well on paper disappears on charcoal.
+
+```
+Surface       #1A1A17   warm charcoal
+Raised        #232420   bubbles, header, inputs
+Ink           #F2F1EC
+Ink muted     #B5B8B0
+Ink subtle    #8C918A
+Border        #34352F
+Accent        #7FB8A4   lighter green — buttons, links, focus
+On accent     #1A1A17   text ON an accent button (dark text on light green)
+Accent soft   #24312C   user bubble
+Warn          #D9A468   Warn soft #2E2519
+Neutral       #A0A59D   Neutral soft #262723
+```
+
+**Measured, not eyeballed.** Every pair below was computed with the WCAG relative-luminance
+formula; the script is in the commit that added this section.
+
+| Pair | Light | Dark |
+|---|---|---|
+| body on surface | 16.30 | 15.42 |
+| secondary on surface | 7.33 | 8.68 |
+| caption on surface | **4.74** | 5.43 |
+| link on surface | 7.18 | 7.72 |
+| button text on accent | 7.49 | 7.72 |
+| user bubble text | 14.73 | 11.97 |
+| warn badge | 5.33 | 6.78 |
+| neutral badge | 5.39 | 5.99 |
+
+All pass 4.5:1. **Light caption text is the tightest at 4.74** — do not lighten
+`--ink-subtle` in light mode without re-measuring.
+
+## Theme switching
+
+Three states, one control:
+
+1. **Default: follow the OS** via `prefers-color-scheme`. Most people never touch the toggle
+   and should get the right answer anyway.
+2. **Toggle overrides** by setting `data-theme="light"|"dark"` on `<html>`.
+3. **The override persists** in `localStorage`. Wrap the read in try/catch — it throws in
+   some privacy modes, and a theme preference is never worth a white screen.
+
+Set the attribute in a tiny inline script **before first paint**, or the page flashes light
+before switching. That flash is the only thing users actually notice about theme handling.
+
+The control is a real `<button>`, 44×44, in the header, with `aria-label="Switch to dark
+mode"` / `"Switch to light mode"` — the label states the action, not the current state.
+Sun and moon are inline stroke SVG.
+
+**Respect `prefers-reduced-motion`:** no transition on the theme change for those users, and
+none on the streaming cursor.
 
 ```
 Radius    4 (bubble tail) · 8 (inputs, small buttons) · 10 (composer) · 12–14 (bubbles, cards) · 999 (pills)
@@ -58,6 +141,46 @@ Width     max 640px for prose, 78% for bot bubbles, 70% for user bubbles
 | **Handoff card** | White, 3px accent left border, 2-col grid of fields collapsing to 1 on mobile. Sits inline in the transcript, not a modal. |
 | **Degradation notice** | Dashed border, neutral-soft fill, info glyph. Explains the shorter answers without mentioning money. |
 | **Composer** | Input + Send, both ≥48px (46 mobile). Persistent caption underneath stating the bot's limits. |
+
+## Responsive
+
+Three sizes, one layout. There is no separate mobile build and no breakpoint zoo — the chat
+column is fluid and only a few things change.
+
+| Width | Behaviour |
+|---|---|
+| **< 480px** | 16px gutters · composer 46px, icon-only send · header drops "Support assistant" · handoff form 1 column · bubbles max 90% · chips scroll horizontally or wrap |
+| **480–900px** | 24px gutters · composer regains its text label · bubbles max 85% |
+| **> 900px** | 32px gutters · transcript capped at **760px and centred** — full-width chat on a 1440px monitor is unreadable · bubbles 78% bot / 70% user |
+
+Rules that matter more than the numbers:
+
+- **Mobile-first.** Write the small layout, then add `min-width` queries. Retrofitting down
+  is how horizontal scroll gets shipped.
+- **No fixed heights** on anything containing text. Fixed heights in the mocks are an
+  artboard requirement, not a design instruction.
+- **The composer must stay reachable** when the mobile keyboard opens: `dvh`, not `vh`.
+  `100vh` under an iOS keyboard pushes the input off-screen — a classic and very visible bug.
+- **Test at 320px**, not just 375. It still exists and it's where layouts break.
+- Touch targets stay ≥44px at every width; they get *more* important on small screens, not
+  less.
+
+## Accessibility
+
+Not a pass at the end. It's a build constraint, and every item here is checkable.
+
+- **Real elements.** `<button>`, `<a href>`, `<input>` + `<label>`. Never `role="button"` on
+  a div — Tab skips it. Icon-only buttons carry `aria-label`.
+- **Keyboard-complete.** Every control reachable by Tab in a sensible order, with a
+  **visible focus ring**. Never `outline: none` without a replacement. Enter submits the
+  composer.
+- **Contrast** ≥4.5:1 body, 3:1 at 24px+, in **both** themes. The table above is the record.
+- **Never colour alone.** The tier badge carries a label, not just a dot colour.
+- **Zoom to 200%** without loss of content or horizontal scroll.
+- **`prefers-reduced-motion`** respected: no theme transition, no streaming-cursor blink.
+- **Form errors** are associated with their field (`aria-describedby`) and announced, not
+  just coloured red.
+- The streaming live-region rule below is the subtle one — read it.
 
 ## Non-negotiables
 

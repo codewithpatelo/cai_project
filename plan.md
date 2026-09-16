@@ -257,22 +257,37 @@ degradation visible, so I can judge the product rather than learn the UI.*
 - Tier badge ("Live model" / "Economy mode" / "Saved answers") + simulated badge.
 - Mobile layout per `Mobile.dc.html`; empty, streaming and degraded states.
 - Persistent `aria-live="polite" aria-atomic="false"` region at app root, mounted always.
+- **Tokens as CSS custom properties in `globals.css` first**, before any component. Light on
+  `:root`, dark under `prefers-color-scheme` and `[data-theme="dark"]`. No hex in components.
+- Theme toggle: OS default, header button overrides, `localStorage` persists (try/catch),
+  attribute set pre-paint so there is no flash.
 
 **AC**
 - **AC6.1** Given a 375px viewport, when any state renders, then no horizontal scroll and every touch target is ≥44px.
 - **AC6.2** Given a streaming answer, when a screen reader is active, then tokens are **not** announced individually; the finished message is announced once.
 - **AC6.3** Given keyboard-only navigation, when Tab is pressed through the page, then every control is reachable with a visible focus ring.
 - **AC6.4** Given each of the three tiers via simulation, when rendered, then the badge reads the correct plain-language label and never a dollar figure.
-- **AC6.5** Given body text on the page ground, when contrast is measured, then it is ≥4.5:1.
+- **AC6.5** Given body text on the page ground **in both themes**, when contrast is measured, then it is ≥4.5:1.
+- **AC6.6** Given `grep -rn "#[0-9A-Fa-f]\{6\}" app/`, when run, then it hits only `globals.css`.
+- **AC6.7** Given an OS set to dark and no stored preference, when the page first paints, then it paints dark — with **no flash of light** first.
+- **AC6.8** Given the theme toggle is clicked, when the page is reloaded, then the chosen theme persists; and when `localStorage` throws, then the page still renders on the OS preference.
+- **AC6.9** Given a 320px viewport, when any state renders, then there is no horizontal scroll.
+- **AC6.10** Given a viewport ≥1280px, when the transcript renders, then it is capped at 760px and centred.
+- **AC6.11** Given `prefers-reduced-motion: reduce`, when the theme changes or an answer streams, then no transition or blink animation runs.
+- **AC6.12** Given 200% browser zoom, when the page renders, then no content is lost and there is no horizontal scroll.
 
 **TC**
 - TC6.1 render test: each tier renders its label; no `$` in any badge.
 - TC6.2 the live region exists on first paint, before any message.
 - TC6.3 chips render six items, each a real `<button>`.
+- TC6.4 theme resolution: no stored value + OS dark → dark; stored "light" + OS dark → light; `localStorage` throwing → falls back to OS without crashing.
+- TC6.5 the theme toggle's `aria-label` states the **action**, not the current state.
 
 **Files** `app/(ui)/**` · `app/globals.css`
-**Read first** `docs/design-system.md`, `docs/mock/*.dc.html`
-**Commit** `feat: build chat UI to the reference mocks` · **Est** 30m
+**Read first** `docs/design-system.md` (§ Token architecture first — it decides whether
+dark mode costs 20 minutes or a rewrite), `docs/mock/*.dc.html`
+**Commit** `feat: build chat UI to the reference mocks` → `feat: light and dark themes with
+an OS-default toggle` · **Est** 40m
 
 ---
 

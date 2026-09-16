@@ -224,6 +224,31 @@ from the blast radius of an unregenerable key.
 own wallet rather than the client's $5.
 
 ---
+### ADR-015 — Responsive, accessible, and a light/dark theme toggle
+**Decision.** Responsive and accessible behaviour are **build constraints** on every screen,
+not a polish pass. A light/dark toggle is IN: OS preference by default, a single header
+button to override, the override persisted in `localStorage`.
+**Alternatives.** Light only (the original scope); dark only; a three-state
+system/light/dark control.
+**Why.** Requested directly by the stakeholder, which settles it. The reasoning still
+matters for *how*: defaulting to `prefers-color-scheme` means most people never touch the
+control and get the right answer anyway, so the toggle is an override rather than the
+mechanism. A three-state control would be more "correct" and is a worse product — it asks
+every user to reason about a setting that already has a good default. Two states plus an OS
+default is Occam's razor applied to a UI affordance.
+**This supersedes** the line in `CLAUDE.md` § What NOT to do that read "don't build a theme
+switcher". That rule existed to prevent scope drift into a settings page; the exception is
+one header button, and the prohibition on a settings page stands.
+**Cost, honestly.** ~20 minutes in Phase 6 *provided* colours are CSS custom properties from
+the start. If the build hardcodes hexes first, it is a rewrite of every component instead —
+which is why the token-architecture rule is stated at the top of `docs/design-system.md` and
+in `CLAUDE.md`, rather than buried.
+**Trade-off.** A second palette to keep contrast-correct. Mitigated by measuring: all 16
+foreground/background pairs across both themes were computed with the WCAG formula and
+recorded in the design system, so a future edit has a baseline to check against rather than
+an opinion.
+
+---
 
 ## Risk register
 

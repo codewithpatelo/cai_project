@@ -14,6 +14,7 @@
 | 6 | Governor + prompt-assembly unit tests with a mock LLM | Verification dimension, and $0 |
 | 7 | Eval set run once against the real model under a $0.40 cap | Proof the thing works, bounded |
 | 8 | Simulated-budget demo mode | Lets the review *see* the safety property |
+| 9 | Responsive + accessible UI, and a light/dark theme toggle | Explicit stakeholder requirement (ADR-015). Responsive and a11y are build constraints, not features; the toggle is ~20 min once tokens are CSS variables |
 
 ### OUT — deliberately not built
 
@@ -24,7 +25,7 @@
 | 3 | RAG / vector store | KB is 4,700 tokens. See `model-selection.md` §6 — RAG would cost more and ground worse |
 | 4 | Conversation persistence across reloads | Requires identity and retention decisions; adds PII risk for near-zero value |
 | 5 | Admin dashboard | Telemetry to logs + a JSON endpoint is enough to demo |
-| 6 | Multi-language UI | Model answers in-language already; localising chrome is cosmetic |
+| 6 | Multi-language UI chrome | Model answers in-language already; localising chrome is cosmetic |
 | 7 | Live human handoff / chat routing | No verifiable channel exists. Faking one would be the worst possible dishonesty in a support bot |
 | 8 | Streaming markdown rendering with rich cards | Plain text + links reads fine and costs an hour |
 | 9 | Pricing answers of any kind | Not published, commercially binding. A permanent OUT, not a time constraint |

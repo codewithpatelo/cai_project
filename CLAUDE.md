@@ -82,6 +82,13 @@ docs/mock/*.dc.html      Reference UI mocks. Build to these; don't reinterpret t
   a race.
 - **UI needs a mock first.** `docs/mock/` and `docs/design-system.md` are the spec. A new
   screen or state gets a mock from `ui-designer` before it gets code.
+- **Responsive and accessible are build constraints, not a final pass.** Mobile-first,
+  ≥44px targets, keyboard-complete with visible focus, ≥4.5:1 contrast in both themes,
+  no horizontal scroll at 320px. Checkable, so they get checked.
+- **Colours come from CSS custom properties, never literal hexes in `app/`.** The mocks
+  carry hexes because the canvas format requires it; copying them into components makes
+  dark mode impossible. `grep -rn "#[0-9A-Fa-f]\{6\}" app/` should only hit
+  `globals.css`.
 
 ## Hard rules — violating any of these means the change is wrong
 
@@ -154,7 +161,8 @@ so run it once everything is deployed, not while a phase is half-built.
   change that file and the evals together, in one commit.
 - Don't refactor across phase boundaries. Finish the phase, commit, then refactor.
 - Don't make the bot apologise more. Terse and honest beats deferential.
-- Don't build an admin dashboard, a settings page, or a theme switcher.
+- Don't build an admin dashboard or a settings page. (A **theme toggle is now IN** — see
+  ADR-015. It is the one exception, and it is a single header button, not a settings page.)
 - Don't mock the governor in integration tests — use `MemoryLedgerStore`. Mocking the thing
   under test is how a broken ceiling passes CI.
 
@@ -193,3 +201,7 @@ Things Claude has gotten wrong here before. Check these specifically:
   screen reader. Stream silently, announce the finished message once
   (`docs/design-system.md`).
 - **Building a UI state that has no mock**, then calling the mock wrong when they differ.
+- **Copying literal hexes out of the mocks into components.** They are inline in the
+  artboards because the canvas format needs them there, not because that's the design.
+- **`100vh` on the chat container.** Under the iOS keyboard it pushes the composer
+  off-screen. Use `dvh`.

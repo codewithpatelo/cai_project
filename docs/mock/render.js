@@ -8,6 +8,7 @@ const boards = {
   'Escalation.dc.html': { w: 1280, h: 860, out: '3-escalation-handoff.png' },
   'Static.dc.html':     { w: 1280, h: 860, out: '4-static-tier.png' },
   'Mobile.dc.html':     { w: 390,  h: 844, out: '5-mobile.png' },
+  'Dark.dc.html':       { w: 1280, h: 860, out: '6-dark-mode.png' },
 };
 
 // The .dc.html files are authored for the design-canvas runtime. For a static
