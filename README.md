@@ -65,7 +65,25 @@ select governor_incr('t:probe', 1, 60);
 select governor_incr('t:probe', 1, 60);
 ```
 
-### 2. Vercel — from the CLI, no GitHub connection needed
+### 2. Vercel — third-party Git import (no GitHub connection)
+
+A GitHub account can hold a Vercel Login Connection for only one Vercel account, so if that
+connection already belongs to another account, linking the usual way is unavailable and
+moving it would break whichever account currently holds it.
+
+This repository is **public**, so Vercel can clone it directly instead:
+
+1. Go to **vercel.com/new** and choose **Import Third-Party Git Repository**.
+2. Paste `https://github.com/codewithpatelo/cai_project`.
+3. **Set the Production Branch to `claude/design-build-handoff-jpyrjr`.** The repository's
+   default branch holds the design documents and no application code, so a build from it
+   will fail.
+4. Add the environment variables from §2c before the first build.
+
+No OAuth, no GitHub App, no change to any existing connection. The trade-off is that pushes
+do not auto-deploy; redeploy from the dashboard.
+
+### 2b. Vercel — from the CLI, no GitHub connection needed
 
 Linking a git repository requires a GitHub Login Connection on the Vercel account, and a
 GitHub account can only be connected to one Vercel account at a time. If that connection
@@ -80,7 +98,9 @@ npx vercel login          # pick the Vercel account this should live in
 npx vercel link           # create or select the project, e.g. cadre-ai-support-bot
 ```
 
-Then set the environment variables. Paste your own values; nothing here is committed.
+### 2c. Environment variables
+
+Paste your own values; nothing here is committed.
 
 ```bash
 # Which provider the key belongs to, and the key itself.
@@ -105,7 +125,7 @@ Deploy to production only with the client key and `OPENROUTER_KEY_PROFILE=client
 (ADR-014). A preview left on the client key drains a $5 budget that cannot be regenerated,
 and there is no undo.
 
-### 2b. Vercel — git-linked (only if the GitHub connection is free)
+### 2d. Vercel — git-linked (only if the GitHub connection is free)
 
 Create a project from this repository. Set environment variables **per environment** — the
 split is the point, not a formality (ADR-014):
