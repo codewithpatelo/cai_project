@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: 'Public Sans', ui-sans-serif, sans-serif; background: #FBFAF7; }
+    a { color: #2F5D50; } a:hover { color: #1F4237; }
+  </style>
+</helmet>
+<div style="width: 1280px; height: 860px; box-sizing: border-box; display: flex; flex-direction: column; background: #FBFAF7;">
+  <header style="display: flex; align-items: center; gap: 16px; padding: 20px 32px; border-bottom: 1px solid #E3E1DA; background: #FFFFFF;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <span style="font-family: 'Fraunces', Georgia, serif; font-size: 22px; font-weight: 600; color: #1A1D1A;">Cadre AI</span>
+      <span style="font-size: 14px; color: #6B726B;">Support assistant</span>
+    </div>
+    <div style="flex-grow: 1;"></div>
+    
+    <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #EAF0ED; color: #2F5D50; font-size: 12px; font-weight: 600; letter-spacing: 0.02em;"><span style="width: 6px; height: 6px; border-radius: 999px; background: #2F5D50;"></span>Live model</span>
+  </header>
+  <main style="flex-grow: 1; overflow: hidden; padding: 28px 32px; display: flex; flex-direction: column; gap: 18px;">
+      <div style="display: flex; justify-content: flex-end;">
+        <div style="max-width: 70%; padding: 14px 18px; border-radius: 14px 14px 4px 14px; background: #EAF0ED; color: #1A1D1A; font-size: 15px; line-height: 1.55;">How much does an engagement cost?</div>
+      </div>
+      <div style="display: flex; justify-content: flex-start;">
+        <div style="max-width: 78%; padding: 16px 20px; border-radius: 14px 14px 14px 4px; background: #FFFFFF; border: 1px solid #E3E1DA; color: #1A1D1A; font-size: 15px; line-height: 1.6;">Cadre doesn't publish pricing, and I won't guess at a range &#8212; engagements are scoped to what you're actually trying to solve. A strategist can give you real numbers. You can reach the team at <a href="https://www.cadreai.com/contact">cadreai.com/contact</a>, or leave your details below and I'll pass them along.</div>
+      </div>
+      <div style="align-self: flex-start; width: 78%; box-sizing: border-box; padding: 22px 24px; border: 1px solid #E3E1DA; border-left: 3px solid #2F5D50; border-radius: 12px; background: #FFFFFF;">
+        <h2 style="margin: 0 0 4px 0; font-family: 'Fraunces', Georgia, serif; font-size: 19px; font-weight: 600; color: #1A1D1A;">Pass my details to the team</h2>
+        <p style="margin: 0 0 18px 0; font-size: 13px; line-height: 1.55; color: #4F554F;">Stored for Cadre's team to pick up. I can't book a meeting or promise a response time.</p>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px;">
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label for="f-name" style="font-size: 13px; font-weight: 500; color: #1A1D1A;">Name</label>
+            <input id="f-name" type="text" style="min-height: 44px; box-sizing: border-box; padding: 11px 13px; border: 1px solid #E3E1DA; border-radius: 8px; background: #FBFAF7; font-family: inherit; font-size: 14px; color: #1A1D1A;">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label for="f-mail" style="font-size: 13px; font-weight: 500; color: #1A1D1A;">Work email</label>
+            <input id="f-mail" type="email" style="min-height: 44px; box-sizing: border-box; padding: 11px 13px; border: 1px solid #E3E1DA; border-radius: 8px; background: #FBFAF7; font-family: inherit; font-size: 14px; color: #1A1D1A;">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label for="f-co" style="font-size: 13px; font-weight: 500; color: #1A1D1A;">Company</label>
+            <input id="f-co" type="text" style="min-height: 44px; box-sizing: border-box; padding: 11px 13px; border: 1px solid #E3E1DA; border-radius: 8px; background: #FBFAF7; font-family: inherit; font-size: 14px; color: #1A1D1A;">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label for="f-urg" style="font-size: 13px; font-weight: 500; color: #1A1D1A;">This is about</label>
+            <select id="f-urg" style="min-height: 44px; box-sizing: border-box; padding: 11px 13px; border: 1px solid #E3E1DA; border-radius: 8px; background: #FBFAF7; font-family: inherit; font-size: 14px; color: #1A1D1A;">
+              <option>General enquiry</option>
+              <option>An active project</option>
+              <option>I'm an existing client</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 14px; margin-top: 18px;">
+          <button type="submit" style="min-height: 44px; padding: 0 20px; border: 0; border-radius: 8px; background: #2F5D50; color: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;">Send to the team</button>
+          <button type="button" style="min-height: 44px; padding: 0 8px; border: 0; background: transparent; color: #4F554F; font-family: inherit; font-size: 14px; cursor: pointer; text-decoration: underline;">No thanks</button>
+        </div>
+      </div>
+  </main>
+  <div style="padding: 20px 32px 24px 32px; border-top: 1px solid #E3E1DA; background: #FBFAF7;">
+    <form style="display: flex; gap: 12px; align-items: flex-end;">
+      <label for="msg" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Your message</label>
+      <input id="msg" type="text" placeholder="Ask about services, industries, or getting started…" style="flex-grow: 1; min-height: 48px; box-sizing: border-box; padding: 13px 16px; border: 1px solid #E3E1DA; border-radius: 10px; background: #FFFFFF; color: #1A1D1A; font-family: inherit; font-size: 15px;">
+      <button type="submit" style="min-height: 48px; padding: 0 22px; border: 0; border-radius: 10px; background: #2F5D50; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;">Send</button>
+    </form>
+    <p style="margin: 10px 0 0 0; font-size: 12px; color: #6B726B;">Answers come from Cadre's public information. For pricing, account access or anything specific to you, this assistant hands off to the team.</p>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1280,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: 'Public Sans', ui-sans-serif, sans-serif; background: #FBFAF7; }
+    a { color: #2F5D50; } a:hover { color: #1F4237; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FBFAF7;">
+  <header style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid #E3E1DA; background: #FFFFFF;">
+    <span style="font-family: 'Fraunces', Georgia, serif; font-size: 18px; font-weight: 600; color: #1A1D1A;">Cadre AI</span>
+    <div style="flex-grow: 1;"></div>
+    <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #F6EEE3; color: #8A5616; font-size: 12px; font-weight: 600; letter-spacing: 0.02em;"><span style="width: 6px; height: 6px; border-radius: 999px; background: #8A5616;"></span>Economy mode</span>
+  </header>
+  <main style="flex-grow: 1; overflow: hidden; padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; justify-content: flex-end;">
+        <div style="max-width: 85%; padding: 12px 15px; border-radius: 14px 14px 4px 14px; background: #EAF0ED; color: #1A1D1A; font-size: 15px; line-height: 1.55;">What is the AI Maturity Index?</div>
+      </div>
+      <div style="display: flex; justify-content: flex-start;">
+        <div style="max-width: 90%; padding: 14px 16px; border-radius: 14px 14px 14px 4px; background: #FFFFFF; border: 1px solid #E3E1DA; color: #1A1D1A; font-size: 15px; line-height: 1.6;">It scores your company across Cadre's eight-pillar framework on a 1&#8211;100 scale, with a grade per pillar, an explanation, and guidance on how to improve.<br><br>Cadre runs it as part of working with their team rather than as a self-serve quiz, so the way to get scored is to talk to a strategist.</div>
+      </div>
+  </main>
+  <div style="padding: 12px 16px 16px 16px; border-top: 1px solid #E3E1DA; background: #FBFAF7;">
+    <form style="display: flex; gap: 8px; align-items: center;">
+      <label for="m-msg" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Your message</label>
+      <input id="m-msg" type="text" placeholder="Ask a question&#8230;" style="flex-grow: 1; min-height: 46px; box-sizing: border-box; padding: 12px 14px; border: 1px solid #E3E1DA; border-radius: 10px; background: #FFFFFF; font-family: inherit; font-size: 15px; color: #1A1D1A;">
+      <button type="submit" aria-label="Send" style="width: 46px; height: 46px; flex-shrink: 0; border: 0; border-radius: 10px; background: #2F5D50; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15"></path><path d="M13 6l6 6-6 6"></path></svg></button>
+    </form>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

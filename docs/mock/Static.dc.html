@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: 'Public Sans', ui-sans-serif, sans-serif; background: #FBFAF7; }
+    a { color: #2F5D50; } a:hover { color: #1F4237; }
+  </style>
+</helmet>
+<div style="width: 1280px; height: 860px; box-sizing: border-box; display: flex; flex-direction: column; background: #FBFAF7;">
+  <header style="display: flex; align-items: center; gap: 16px; padding: 20px 32px; border-bottom: 1px solid #E3E1DA; background: #FFFFFF;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <span style="font-family: 'Fraunces', Georgia, serif; font-size: 22px; font-weight: 600; color: #1A1D1A;">Cadre AI</span>
+      <span style="font-size: 14px; color: #6B726B;">Support assistant</span>
+    </div>
+    <div style="flex-grow: 1;"></div>
+    <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #F6EEE3; color: #8A5616; font-size: 12px; font-weight: 600; letter-spacing: 0.02em;">Simulated budget</span>
+    <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #EFEEE9; color: #5C625C; font-size: 12px; font-weight: 600; letter-spacing: 0.02em;"><span style="width: 6px; height: 6px; border-radius: 999px; background: #5C625C;"></span>Saved answers</span>
+  </header>
+  <main style="flex-grow: 1; overflow: hidden; padding: 28px 32px; display: flex; flex-direction: column; gap: 18px;">
+      <div style="display: flex; justify-content: flex-end;">
+        <div style="max-width: 70%; padding: 14px 18px; border-radius: 14px 14px 4px 14px; background: #EAF0ED; color: #1A1D1A; font-size: 15px; line-height: 1.55;">How do I access the Cadre portal?</div>
+      </div>
+      <div style="display: flex; justify-content: flex-start;">
+        <div style="max-width: 78%; padding: 16px 20px; border-radius: 14px 14px 14px 4px; background: #FFFFFF; border: 1px solid #E3E1DA; color: #1A1D1A; font-size: 15px; line-height: 1.6;">Cadre gives clients a central portal for tracking tools, agents, training and results, but access is set up per client and I don't have a login link I can verify &#8212; so I'd be guessing if I gave you one. The fastest route is your Cadre contact, or <a href="https://www.cadreai.com/contact">cadreai.com/contact</a>. I can also pass an access request to the team.</div>
+      </div>
+      <div style="align-self: flex-start; display: flex; align-items: flex-start; gap: 12px; max-width: 78%; padding: 14px 18px; border: 1px dashed #E3E1DA; border-radius: 12px; background: #EFEEE9;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5C625C" stroke-width="2" stroke-linecap="round" style="flex-shrink: 0; margin-top: 1px;" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5"></path><path d="M12 16.5v.01"></path></svg>
+        <p style="margin: 0; font-size: 13px; line-height: 1.55; color: #4F554F;">Running on saved answers right now, so replies are shorter than usual. Everything here is still drawn from Cadre's published information, and the handoff works as normal.</p>
+      </div>
+  </main>
+  <div style="padding: 20px 32px 24px 32px; border-top: 1px solid #E3E1DA; background: #FBFAF7;">
+    <form style="display: flex; gap: 12px; align-items: flex-end;">
+      <label for="msg" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Your message</label>
+      <input id="msg" type="text" placeholder="Ask a question…" style="flex-grow: 1; min-height: 48px; box-sizing: border-box; padding: 13px 16px; border: 1px solid #E3E1DA; border-radius: 10px; background: #FFFFFF; color: #1A1D1A; font-family: inherit; font-size: 15px;">
+      <button type="submit" style="min-height: 48px; padding: 0 22px; border: 0; border-radius: 10px; background: #2F5D50; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;">Send</button>
+    </form>
+    <p style="margin: 10px 0 0 0; font-size: 12px; color: #6B726B;">Answers come from Cadre's public information. For pricing, account access or anything specific to you, this assistant hands off to the team.</p>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1280,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

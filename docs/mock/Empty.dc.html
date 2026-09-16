@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: 'Public Sans', ui-sans-serif, sans-serif; background: #FBFAF7; }
+    a { color: #2F5D50; } a:hover { color: #1F4237; }
+  </style>
+</helmet>
+<div style="width: 1280px; height: 860px; box-sizing: border-box; display: flex; flex-direction: column; background: #FBFAF7;">
+  <header style="display: flex; align-items: center; gap: 16px; padding: 20px 32px; border-bottom: 1px solid #E3E1DA; background: #FFFFFF;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <span style="font-family: 'Fraunces', Georgia, serif; font-size: 22px; font-weight: 600; color: #1A1D1A;">Cadre AI</span>
+      <span style="font-size: 14px; color: #6B726B;">Support assistant</span>
+    </div>
+    <div style="flex-grow: 1;"></div>
+    
+    <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #EAF0ED; color: #2F5D50; font-size: 12px; font-weight: 600; letter-spacing: 0.02em;"><span style="width: 6px; height: 6px; border-radius: 999px; background: #2F5D50;"></span>Live model</span>
+  </header>
+  <main style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 0 32px;">
+    <div style="max-width: 640px; width: 100%;">
+      <h1 style="margin: 0 0 12px 0; font-family: 'Fraunces', Georgia, serif; font-size: 38px; font-weight: 600; line-height: 1.15; color: #1A1D1A;">How can I help?</h1>
+      <p style="margin: 0 0 28px 0; font-size: 16px; line-height: 1.6; color: #4F554F;">I answer questions about Cadre AI's services, industries and how to get started. When I don't have a verified answer, I'll say so and put you in touch with the team.</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+        <button type="button" style="min-height: 44px; padding: 10px 16px; border: 1px solid #E3E1DA; border-radius: 999px; background: #FFFFFF; color: #1A1D1A; font-family: inherit; font-size: 14px; text-align: left; cursor: pointer;">What does Cadre AI do?</button>
+        <button type="button" style="min-height: 44px; padding: 10px 16px; border: 1px solid #E3E1DA; border-radius: 999px; background: #FFFFFF; color: #1A1D1A; font-family: inherit; font-size: 14px; text-align: left; cursor: pointer;">Do you work with my industry?</button>
+        <button type="button" style="min-height: 44px; padding: 10px 16px; border: 1px solid #E3E1DA; border-radius: 999px; background: #FFFFFF; color: #1A1D1A; font-family: inherit; font-size: 14px; text-align: left; cursor: pointer;">How do I book a call?</button>
+        <button type="button" style="min-height: 44px; padding: 10px 16px; border: 1px solid #E3E1DA; border-radius: 999px; background: #FFFFFF; color: #1A1D1A; font-family: inherit; font-size: 14px; text-align: left; cursor: pointer;">What is the AI Maturity Index?</button>
+        <button type="button" style="min-height: 44px; padding: 10px 16px; border: 1px solid #E3E1DA; border-radius: 999px; background: #FFFFFF; color: #1A1D1A; font-family: inherit; font-size: 14px; text-align: left; cursor: pointer;">How do I access the client portal?</button>
+        <button type="button" style="min-height: 44px; padding: 10px 16px; border: 1px solid #E3E1DA; border-radius: 999px; background: #FFFFFF; color: #1A1D1A; font-family: inherit; font-size: 14px; text-align: left; cursor: pointer;">How does Cadre approach data security?</button>
+      </div>
+    </div>
+  </main>
+  <div style="padding: 20px 32px 24px 32px; border-top: 1px solid #E3E1DA; background: #FBFAF7;">
+    <form style="display: flex; gap: 12px; align-items: flex-end;">
+      <label for="msg" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Your message</label>
+      <input id="msg" type="text" placeholder="Ask about services, industries, or getting started…" style="flex-grow: 1; min-height: 48px; box-sizing: border-box; padding: 13px 16px; border: 1px solid #E3E1DA; border-radius: 10px; background: #FFFFFF; color: #1A1D1A; font-family: inherit; font-size: 15px;">
+      <button type="submit" style="min-height: 48px; padding: 0 22px; border: 0; border-radius: 10px; background: #2F5D50; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;">Send</button>
+    </form>
+    <p style="margin: 10px 0 0 0; font-size: 12px; color: #6B726B;">Answers come from Cadre's public information. For pricing, account access or anything specific to you, this assistant hands off to the team.</p>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1280,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

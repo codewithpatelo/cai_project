@@ -41,7 +41,9 @@ pnpm eval           # COSTS REAL MONEY. See /eval. Never run unprompted.
 ```
 
 Custom commands: `/verify` (before commit) · `/eval` (capped spend) · `/deploy-check`
-(before/after deploy) · `/kb-audit` (unsourced facts). Definitions in `.claude/commands/`.
+(before/after deploy) · `/kb-audit` (unsourced facts) · `/rca` (root-cause a bug).
+Subagents: `kb-curator` · `governor-engineer` · `ui-designer` · `researcher` · `tester` ·
+`eval-runner` · `simulated-user` · `reviewer`. Definitions in `.claude/`.
 
 ## Structure
 
@@ -55,9 +57,30 @@ app/api/chat/route.ts    SSE endpoint. Thin orchestration only.
 app/api/handoff/route.ts Lead capture.
 app/api/health/route.ts  Non-secret status.
 app/(ui)/                Presentation.
-docs/                    Design docs. architecture · governor-spec · model-selection ·
-                         system-prompt · eval-set · decisions · demo-script.
+docs/                    Design docs. principles · architecture · governor-spec ·
+                         model-selection · system-prompt · design-system · eval-set ·
+                         decisions · demo-script.
+docs/mock/*.dc.html      Reference UI mocks. Build to these; don't reinterpret them.
 ```
+
+## How we work
+
+`docs/principles.md` is the long form. The short form:
+
+- **Spec-driven.** Every phase in `plan.md` carries a user story, use cases, acceptance
+  criteria and test cases. Build to them. **If a spec is wrong, fix the spec first** — never
+  leave code and plan disagreeing.
+- **No overengineering. Occam's razor.** Simplest thing that is *correct* — both tests.
+  No abstraction until the second real caller. No dependency for a 20-line function.
+- **Clarity over cleverness.** The reviewer will ask what a specific function does.
+- **UX-focused.** Value lands on the user's side, or it isn't a feature.
+- **Research before inventing.** Non-trivial problem → find how the industry solves it
+  (`researcher` subagent), cite it with a URL and a date, then add judgement on top.
+  Don't reinvent the wheel badly.
+- **Root cause, not symptom** (`/rca`). No empty catch, no skipped test, no retry around
+  a race.
+- **UI needs a mock first.** `docs/mock/` and `docs/design-system.md` are the spec. A new
+  screen or state gets a mock from `ui-designer` before it gets code.
 
 ## Hard rules — violating any of these means the change is wrong
 
@@ -137,6 +160,8 @@ Before you say something is done:
   `docs/system-prompt.md` when working on prompt assembly ·
   `docs/eval-set.md` when writing or running tests ·
   `docs/model-selection.md` only when budget numbers change ·
+  `docs/design-system.md` + `docs/mock/*` when building UI ·
+  `docs/principles.md` when a judgement call isn't covered by the rules ·
   `kb/*.md` only when editing the KB.
 - **Never load the whole `docs/` directory.** It is ~40k tokens and you need one file.
 - `/clear` between phases in `plan.md`. Phases are designed to be independent for exactly
@@ -158,3 +183,7 @@ Things Claude has gotten wrong here before. Check these specifically:
 - **Quietly weakening fail-closed** into "log a warning and continue" because it's more
   ergonomic. It isn't a bug to be fixed; it's the requirement.
 - **Adding a helpful price range** because the answer felt unhelpful without one.
+- **Announcing every streamed token to the live region.** The intuitive approach floods a
+  screen reader. Stream silently, announce the finished message once
+  (`docs/design-system.md`).
+- **Building a UI state that has no mock**, then calling the mock wrong when they differ.
