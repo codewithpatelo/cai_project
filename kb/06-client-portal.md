@@ -2,7 +2,7 @@
 
 ## What is verified
 - Cadre gives clients a **centralized portal to track tools, agents, training, and
-  results**. `[V:snippet]`
+  results**. `[V:live]`
 - The brief confirms the portal is a common inbound topic: clients ask how to access the
   portal to track their AI tools, agents, and results. `[V:brief]`
 
@@ -40,5 +40,5 @@ reset a password, check project status, list their agents, or see their results.
 plainly and escalates. See `08-contact-and-escalation.md`.
 
 Sources:
-- https://www.cadreai.com/ (extract, 2026-09-16)
+- https://www.cadreai.com/ (live read, 2026-09-16)
 - Cadre AI Candidate Take-Home Challenge v1.1, "What to Build" scenarios (BRIEF)

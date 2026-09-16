@@ -418,7 +418,7 @@ streaming chunks and a per-token filter would never see one whole.
    The compiler enforces the real structure: a file asserting facts must cite sources, and a
    URL may appear anywhere in `kb/` only if some `Sources:` block cites it.
 
-### ADR-022 — Ship the full KB unverified, as an explicit owner decision
+### ADR-022 — Ship the full KB unverified — SUPERSEDED by ADR-024
 
 **Context.** ADR-016 built `KB_MIN_VERIFICATION` so a public deploy could ship only
 brief-verified facts when the live audit had not run. Asked to choose, the project owner
@@ -496,3 +496,52 @@ A test caught the sharp edge here: `Number('')` is `0`, and Vercel writes an uns
 as an empty string, so a half-configured override would have priced input at zero and
 under-counted spend. An empty value is now absent, not free, and both rates are required
 together.
+
+### ADR-024 — The live audit ran, and it corrected the KB in both directions
+
+**Context.** ADR-016 and ADR-022 both rested on the same constraint: nothing in the build
+environment could reach `cadreai.com`, so 27 facts shipped unverified. Connecting a
+**hosted** browsing tool removed that constraint — the fetch happens on the provider's
+infrastructure rather than inside this sandbox, which is the same reason the Supabase and
+Vercel integrations work while raw HTTP does not. That distinction is the whole answer to
+"why can't you just use a browser": a local headless browser would have used the same
+blocked proxy, and did, with `ERR_TUNNEL_CONNECTION_FAILED`.
+
+**Decision.** Run the audit. Promote what the pages confirm, delete what they do not, and
+add what the KB was wrongly withholding.
+
+**Outcome: 7 `[V:brief]` · 30 `[V:live]` · 0 `[V:snippet]`.** ADR-022's exposure is closed.
+
+**Deleted — asserted by the KB, absent from every page:**
+"200+ companies guided"; the Index's "1-to-100 scale"; a Construction agent doing plan
+takeoffs and cutting estimating "from days to hours"; voice and chat agents "unifying
+communication channels with SaaS integration for availability checking and automatic
+booking".
+
+**Added — published all along, and the KB was suppressing it:**
+- **All eight AI Maturity Index pillars.** The KB had four and instructed the bot to say
+  the list was partial. This is the finding worth dwelling on: the discipline that stops a
+  bot inventing facts had, uncorrected, produced a bot that *refused to answer a question
+  its company answers publicly*. Caution and accuracy are not the same thing, and only a
+  live read could tell them apart.
+- **Real contact details** — `hello@gocadre.ai`, `(619) 324-3223`, and the San Diego office.
+  The KB previously forbade the bot from giving any of them. Note the contact domain is
+  `gocadre.ai`, not `cadreai.com`.
+- Official OpenAI Service Partner; the nine industries and eight departments verbatim from
+  the `/agents` filters; the real Construction agent (**Change Order Tracker**).
+
+**Two bugs the change surfaced, both in the safety machinery itself:**
+
+1. **The output filter mangled the email.** The domain half of an address is host-shaped, so
+   `hello@gocadre.ai` came out as `hello@[link removed]` — the filter breaking the single
+   most useful answer the bot has. Addresses are now their own class, matched before URLs
+   and checked against an email allow-list the compiler derives from `kb/`, so an invented
+   `support@cadreai.com` is still stripped.
+2. **A "we deleted X" note re-taught X to the model.** The first pass at these corrections
+   left provenance in the KB: *"an earlier version claimed a 1-to-100 scale"*. The whole KB
+   goes into the prompt, so that note put the fabricated figure back in front of the model
+   inside a `Not published` block. Corrections must now state the truth without quoting the
+   falsehood; the provenance lives in git history and here.
+
+**Still outstanding:** the evals have never run against a real model, so section C remains
+unverified rather than passed.

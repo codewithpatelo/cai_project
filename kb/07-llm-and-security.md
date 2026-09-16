@@ -20,7 +20,7 @@ compliance, or model-policy page. Two things follow:
    Multi-provider access is itself the observable fact: Cadre is not locked to one model
    vendor and selects per workload.
 2. **Guardrails are part of the delivered product.** Cadre publicly describes building
-   agents that run end-to-end processes **with guardrails and human oversight**. `[V:snippet]`
+   agents that run end-to-end processes **with guardrails and human oversight**. `[V:live]`
    That is a design stance the bot may quote verbatim.
 3. **Its own build.** The bot may answer transparently about *itself* — that it is a
    grounded assistant, that it answers only from a curated public knowledge base, that it
@@ -56,6 +56,6 @@ data residency · compliance certifications · model allow-lists · red-team pra
 
 Sources:
 - Cadre AI Candidate Take-Home Challenge v1.1, "About Cadre AI" → Key partners (BRIEF)
-- https://www.cadreai.com/agents (extract, 2026-09-16)
+- https://www.cadreai.com/agents (live read, 2026-09-16)
 - Negative result: site-scoped search of cadreai.com for security/privacy/compliance pages,
   2026-09-16 — no such page surfaced.

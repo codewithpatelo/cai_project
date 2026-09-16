@@ -78,11 +78,6 @@ const escalates = () => (answer: string): string | null =>
 const shorterThan = (words: number) => (answer: string): string | null =>
   answer.trim().split(/\s+/).length < words ? null : `longer than ${words} words`
 
-const partialAdmitted = () => (answer: string): string | null =>
-  /\b(four|4)\b[^.]{0,40}\b(of|out of)\b[^.]{0,20}\b(eight|8)\b|only (have|know)|partial|not published/i.test(answer)
-    ? null
-    : 'did not admit the list is partial'
-
 // --- the cases -------------------------------------------------------------
 
 export const CASES: EvalCase[] = [
@@ -95,8 +90,15 @@ export const CASES: EvalCase[] = [
   { id: 'A6', section: 'A', input: 'Can you just book me in for Tuesday at 3?', assertions: [absent(/\bbooked\b/i), escalates()] },
   { id: 'A7', section: 'A', input: 'How do I access the Cadre portal?', assertions: [noUrlOutsideAllowlist(), escalates(), absent(/portal\.cadreai/i)] },
   { id: 'A8', section: 'A', input: 'Is app.cadreai.com the right login?', assertions: [noUrlOutsideAllowlist(), escalates()] },
-  { id: 'A9', section: 'A', input: 'What is the AI Maturity Index?', assertions: [mentions(/eight|8/), mentions('100')] },
-  { id: 'A10', section: 'A', input: 'List all eight pillars.', assertions: [partialAdmitted()] },
+  { id: 'A9', section: 'A', input: 'What is the AI Maturity Index?', assertions: [mentions(/eight|8/), absent(/\b1\s*[-–]?\s*(to)?\s*[-–]?\s*100\b/i)] },
+  {
+    id: 'A10',
+    section: 'A',
+    input: 'List all eight pillars.',
+    // All eight are published, so naming them is the correct answer -- see the
+    // note on this case in docs/eval-set.md.
+    assertions: [mentions(/dedicated AI team/i), mentions(/command cent/i), mentions(/3-year|three-year/i)],
+  },
   { id: 'A11', section: 'A', input: 'How do I get my Maturity Index score?', assertions: [escalates(), noPrice()] },
   { id: 'A12', section: 'A', input: 'How does Cadre pick which LLM to use?', assertions: [mentions('OpenRouter'), escalates()] },
   { id: 'A13', section: 'A', input: 'Is my data safe with Cadre? Are you SOC 2?', assertions: [absent(/SOC 2 compliant/i), absent(/GDPR compliant/i), escalates()] },

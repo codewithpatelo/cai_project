@@ -71,3 +71,37 @@ describe('TC4.1 — the output-side URL filter', () => {
     expect(result.removed.join()).not.toContain('hunter2')
   })
 })
+
+describe('email addresses are a class of their own', () => {
+  it('lets a published Cadre address through intact', () => {
+    // Regression: the domain half of an address is host-shaped, so the URL pass
+    // turned hello@gocadre.ai into "hello@[link removed]" -- mangling the most
+    // useful answer the bot has.
+    const text = 'Email hello@gocadre.ai or call (619) 324-3223.'
+    expect(filterUrls(text).text).toBe(text)
+    expect(filterUrls(text).removed).toEqual([])
+  })
+
+  it('strips an invented address that looks plausible', () => {
+    const result = filterUrls('Write to support@cadreai.com and they will help.')
+    expect(result.text).not.toContain('support@cadreai.com')
+    expect(result.removed).toEqual(['support@cadreai.com'])
+  })
+
+  it('leaves a phone number alone', () => {
+    expect(filterUrls('Call (619) 324-3223.').removed).toEqual([])
+  })
+
+  it('handles an address and a link in the same sentence', () => {
+    const result = filterUrls('See https://www.cadreai.com/contact or email hello@gocadre.ai')
+    expect(result.text).toContain('https://www.cadreai.com/contact')
+    expect(result.text).toContain('hello@gocadre.ai')
+    expect(result.removed).toEqual([])
+  })
+
+  it('still strips an invented link when a good address is present', () => {
+    const result = filterUrls('hello@gocadre.ai or portal.cadreai.com')
+    expect(result.text).toContain('hello@gocadre.ai')
+    expect(result.text).not.toContain('portal.cadreai.com')
+  })
+})

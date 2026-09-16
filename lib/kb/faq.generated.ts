@@ -89,7 +89,7 @@ export const FAQ: readonly FaqEntry[] = [
       "reach out",
       "consultation"
     ],
-    "answer": "You can reach a Cadre strategist through the contact page at https://www.cadreai.com/contact. If you'd rather I pass along your details, tell me your name, work email, company and what you're trying to solve, and I'll send it to the team.",
+    "answer": "You can reach a Cadre strategist through the contact page at https://www.cadreai.com/contact, by email at hello@gocadre.ai, or on (619) 324-3223. If you'd rather I pass along your details, tell me your name, work email, company and what you're trying to solve, and I'll send it to the team.",
     "source": "04-getting-started.md"
   },
   {
@@ -109,7 +109,7 @@ export const FAQ: readonly FaqEntry[] = [
       "eight pillar",
       "8 pillar"
     ],
-    "answer": "Cadre runs the Index as part of working with their team rather than as a self-serve quiz, so the way to get scored is to talk to a strategist — https://www.cadreai.com/contact. I can also pass your details along if that's easier.",
+    "answer": "The AI Maturity Index scores you across Cadre's eight-pillar framework — build your dedicated AI team, deploy your AI Command Center, create an AI-first culture shift, connect and enable your tech stack, an AI-healthy data assessment, a framework for AI agent readiness, departmental AI deep dives, and find your 3-Year AI Vision. You get a grade in each area plus guidance on how to improve. Cadre runs it as part of working with their team rather than as a self-serve quiz, so the way to get scored is to talk to a strategist — https://www.cadreai.com/contact or hello@gocadre.ai. I can also pass your details along.",
     "source": "05-ai-maturity-index.md"
   },
   {
@@ -175,7 +175,7 @@ export const FAQ: readonly FaqEntry[] = [
       "speak to someone",
       "escalate"
     ],
-    "answer": "I can't connect you to someone live, but I can take your details and pass them to the Cadre team. I can't promise a response time — that's up to them. You can also reach them directly at https://www.cadreai.com/contact.",
+    "answer": "I can't connect you to someone live, but I can take your details and pass them to the Cadre team. I can't promise a response time — that's up to them. You can also reach them directly at https://www.cadreai.com/contact, on hello@gocadre.ai, or (619) 324-3223.",
     "source": "08-contact-and-escalation.md"
   }
 ]

@@ -110,14 +110,23 @@ describe('the assertions themselves are right', () => {
     ).toEqual([])
   })
 
-  it('A10 fails a padded list of eight pillars', () => {
-    const padded = 'The eight pillars are: team, command center, culture, vision, data, governance, tooling, and adoption.'
-    expect(check('A10', padded)).not.toEqual([])
+  it('A10 passes the full published list', () => {
+    // All eight pillars are on cadreai.com/strategy, confirmed by live read.
+    expect(
+      check(
+        'A10',
+        'The eight are: build your dedicated AI team, deploy your AI Command Center, create an AI-first culture shift, connect and enable your tech stack, an AI-healthy data assessment, a framework for AI agent readiness, departmental AI deep dives, and find your 3-Year AI Vision.',
+      ),
+    ).toEqual([])
   })
 
-  it('A10 passes an honest partial list', () => {
-    expect(
-      check('A10', 'I have four of the eight published pillar names: dedicated AI team, the AI command center, AI-first culture shift, and your three-year AI vision.'),
-    ).toEqual([])
+  it('A10 fails an answer that still claims it only has four', () => {
+    // This used to be the PASSING answer. The live audit inverted it: refusing to
+    // give a list Cadre publishes is now under-answering, not caution.
+    expect(check('A10', 'I only have four of the eight pillar names.')).not.toEqual([])
+  })
+
+  it('A9 fails the invented 1-to-100 scale', () => {
+    expect(check('A9', 'It scores you on a 1-to-100 scale across eight pillars.')).not.toEqual([])
   })
 })

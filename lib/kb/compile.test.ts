@@ -252,11 +252,36 @@ describe('the real knowledge base compiles clean', () => {
     expect(result.kb).toMatch(/are all inventions|are inventions/)
   })
 
-  it('still names exactly four AI Maturity Index pillars', () => {
-    // Padding this list to eight is the project's named hallucination risk.
-    const pillars = ['dedicated AI team', 'AI command center', 'AI-first culture shift', 'three-year AI vision']
-    for (const p of pillars) expect(result.kb).toContain(p)
-    expect(result.kb).toMatch(/partial list only/)
+  it('names all eight AI Maturity Index pillars, because all eight are published', () => {
+    // This test used to assert FOUR and require the KB to say the list was
+    // partial. A live read of cadreai.com/strategy on 2026-09-16 found the full
+    // list, so refusing to give it was under-answering rather than caution.
+    const pillars = [
+      'dedicated AI team',
+      'AI Command Center',
+      'AI-First Culture Shift',
+      'Connect & Enable your Tech Stack',
+      'AI-Healthy Data Assessment',
+      'AI Agent Readiness',
+      'Departmental AI Deep Dives',
+      '3-Year AI Vision',
+    ]
+    for (const p of pillars) expect(result.kb, `missing pillar: ${p}`).toContain(p)
+  })
+
+  it('no longer claims a numeric Maturity Index scale', () => {
+    // "1-to-100" was in the KB and is on no Cadre page. Cadre publishes "a grade
+    // in each area" and nothing numeric.
+    expect(result.kb).not.toMatch(/\b1\s*[-–]?\s*(to)?\s*[-–]?\s*100\b/i)
+  })
+
+  it('no longer claims a count of companies served', () => {
+    expect(result.kb).not.toMatch(/200\+?\s*(companies|businesses)/i)
+  })
+
+  it('carries the published contact details', () => {
+    expect(result.kb).toContain('hello@gocadre.ai')
+    expect(result.kb).toContain('619')
   })
 
   it('carries a brief-verified construction fact but no unsourced construction detail', () => {
@@ -264,13 +289,29 @@ describe('the real knowledge base compiles clean', () => {
     expect(result.kb).not.toMatch(/takeoff report|material quantities|days to hours/i)
   })
 
-  it('still compiles, smaller, when only brief-verified facts are allowed', () => {
+  it('has nothing left for the verification gate to drop', () => {
+    // After the live audit there are no [V:snippet] facts, so a brief-or-better
+    // build is byte-identical to the default one. That is the gate having done
+    // its job, not the gate being broken -- the mechanism stays in place for the
+    // next fact someone adds from a search extract.
     const brief = compileKb(realKbFiles(), BRIEF_ONLY)
     expect(brief.errors).toEqual([])
     expect(brief.kept.snippet).toBe(0)
-    expect(estimateTokens(brief.kb)).toBeLessThan(estimateTokens(result.kb))
-    // The escalation paths are policy, not sourced facts, so they must survive.
+    expect(result.kept.snippet).toBe(0)
+    expect(brief.kb).toBe(result.kb)
     expect(brief.faq).toHaveLength(8)
     expect(brief.kb).toContain('https://www.cadreai.com/contact')
+  })
+
+  it('still drops an unverified fact if one is added', () => {
+    // The gate is only meaningful if it demonstrably still bites.
+    const files = realKbFiles()
+    files.push({
+      name: '90-new.md',
+      raw: '# New\n- Something from a search extract. `[V:snippet]`\n\nSources:\n- from the brief.\n',
+    })
+    expect(compileKb(files, FULL).kept.snippet).toBe(1)
+    expect(compileKb(files, BRIEF_ONLY).kept.snippet).toBe(0)
+    expect(compileKb(files, BRIEF_ONLY).kb).not.toContain('Something from a search extract')
   })
 })

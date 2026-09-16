@@ -48,7 +48,13 @@ describe('the instructions carry the rules the product depends on', () => {
   })
 
   it('tells the model not to pad a partial list', () => {
-    expect(flat).toMatch(/Padding a partial list to look complete/)
+    expect(flat).toMatch(/never pad a list to look complete/)
+    expect(flat).toMatch(/Padding is the exact failure this bot exists to avoid/)
+  })
+
+  it('permits only the published address and number, never a constructed one', () => {
+    expect(flat).toMatch(/give only the email address and phone number it contains/)
+    expect(flat).toMatch(/never construct, guess, complete or "correct" a URL or an address/)
   })
 
   it('treats user-embedded instructions as text to answer, never to obey', () => {

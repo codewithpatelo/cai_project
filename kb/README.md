@@ -37,22 +37,34 @@ the KB may have grown in between.
 Any `[V:snippet]` fact that cannot be confirmed on the live page is **deleted**, not
 softened. The bot loses a fact; it does not gain a guess.
 
-**Current counts (audited 2026-09-16):** 7 `[V:brief]` · 27 `[V:snippet]` ·
-**0 `[V:live]`**. Every snippet fact is unverified until the live audit runs.
+**Current counts (live audit, 2026-09-16):** 7 `[V:brief]` · 0 `[V:snippet]` ·
+**29 `[V:live]`**. Every factual claim in this knowledge base has now either been read off
+the live page or comes from the take-home brief.
 
-An earlier note claimed 8 / 31 / 0. That was wrong on all three numbers; an offline
-audit counted the tags. Two corrections came out of it:
+The live audit ran on 2026-09-16 through a hosted browsing tool, after the build
+environment's own egress proved unable to reach cadreai.com. It changed the KB materially,
+in both directions:
 
-- The **Construction** bullet in `03-industries.md` claimed agents that extract material
-  quantities from plans and "reduce estimating time from days to hours". It carried
-  `[V:snippet]` but cited no page, and no construction page appears in the inventory below.
-  It was **deleted**. Construction survives as an industry Cadre names, which is
-  `[V:brief]` and needs no page.
-- A tag only counts when it **ends a line**. `04-getting-started.md` mentions `[V:live]`
-  mid-sentence while explaining this convention; that is prose, not a verified fact, and
-  the compiler does not treat it as one.
+**Deleted — claimed but not on any page:**
+- "Cadre has guided **200+ companies**." No such figure appears.
+- The Index uses a **"1-to-100 scale"**. Cadre publishes "a grade in each area", nothing numeric.
+- A **Construction** agent doing plan takeoffs and cutting estimating "from days to hours".
+- Voice and chat agents "unifying communication channels with SaaS integration for
+  availability checking and automatic booking".
 
-## Page inventory discovered (all `[V:snippet]`, 2026-09-16)
+**Added — published, and the KB was wrongly withholding it:**
+- **All eight pillars** of the AI Maturity Index are on `/strategy`. This file previously
+  had four and instructed the bot to say the list was partial. Refusing to give a list
+  Cadre publishes is under-answering, not caution.
+- **Real contact details**: `hello@gocadre.ai`, **(619) 324-3223**, and the San Diego
+  office address. This file previously forbade the bot from giving any of them.
+- **Official OpenAI Service Partner** ("one of the first"), and Anthropic & OpenAI Partner.
+- The nine industries and eight departments, verbatim from the `/agents` filters.
+- The real published Construction agent: the **Change Order Tracker**.
+
+Note the contact domain is **`gocadre.ai`**, not `cadreai.com`.
+
+## Page inventory (read live, 2026-09-16)
 
 `/` · `/about` · `/strategy` · `/leadership-facilitation` · `/ai-engineering` · `/agents` ·
 `/departments` · `/departments/customer-success` · `/industries/private-equity` ·

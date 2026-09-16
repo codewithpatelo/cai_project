@@ -1,23 +1,30 @@
 # Industries and departments
 
-## Industries with a published page or named in the brief
-Professional Services · Private Equity · Financial Services · Real Estate ·
-Mortgage & Lending · Construction · Retail & E-commerce · Manufacturing & Logistics ·
-Hospitality `[V:snippet]`
+## Industries Cadre publishes agents for
+Taken verbatim from the industry filter on https://www.cadreai.com/agents: `[V:live]`
+Retail & E-commerce · Hospitality · Mortgage & Lending · Financial Services ·
+Construction · Manufacturing & Logistics · Real Estate · Professional Services ·
+Private Equity
 
 The brief independently names: professional services, private equity, financial services,
 real estate, construction, manufacturing, retail "and more". `[V:brief]`
 
 Published industry example:
 - **Private equity** — deal sourcing, and due diligence work including **CIM analysis,
-  financial modeling, and contract review**. `[V:snippet]`
+  financial modeling, and contract review**. `[V:live]`
   Source page: https://www.cadreai.com/industries/private-equity
+- **Construction** — a published agent example, the **Change Order Tracker**: it documents
+  scope changes as they happen, generates change-order pricing, and protects margin on each
+  change. `[V:live]`
+  Source page: https://www.cadreai.com/agents
 
 ## Departments
-Cadre publishes AI solutions organised **by department** as well as by industry. `[V:snippet]`
+Cadre publishes AI solutions organised **by department** as well as by industry. `[V:live]`
 Source page: https://www.cadreai.com/departments
 A published department page exists for **Customer Success** — predicting at-risk accounts,
-automating health monitoring, scaling personalised engagement. `[V:snippet]`
+automating health monitoring, scaling personalised engagement. `[V:live]`
+Cadre publishes agents by department for: Legal, Technology, Marketing, Customer Success,
+Finance, Operations, Executive Leadership and Sales. `[V:live]`
 Source page: https://www.cadreai.com/departments/customer-success
 
 ## What the bot says
@@ -50,8 +57,9 @@ Never extrapolate from one industry to a neighbouring one ("you do construction,
 must do civil engineering"). Adjacency is not a published fact.
 
 Sources:
+- https://www.cadreai.com/agents (live read, 2026-09-16)
 - Cadre AI Candidate Take-Home Challenge v1.1, "About Cadre AI" table (BRIEF)
-- https://www.cadreai.com/industries/private-equity (extract, 2026-09-16)
-- https://www.cadreai.com/departments (extract, 2026-09-16)
-- https://www.cadreai.com/departments/customer-success (extract, 2026-09-16)
-- https://www.cadreai.com/ai-engineering (extract, 2026-09-16)
+- https://www.cadreai.com/industries/private-equity (live read, 2026-09-16)
+- https://www.cadreai.com/departments (live read, 2026-09-16)
+- https://www.cadreai.com/departments/customer-success (live read, 2026-09-16)
+- https://www.cadreai.com/ai-engineering (live read, 2026-09-16)

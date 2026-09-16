@@ -1,9 +1,11 @@
 # Contact and escalation
 
 ## The only verified channel
-**https://www.cadreai.com/contact** — the bot may link this freely. `[V:snippet]`
+**https://www.cadreai.com/contact** — the bot may link this freely. `[V:live]`
 
-No email address, phone number, or scheduling link is verified. Do not emit one.
+Cadre also publishes on that page: **hello@gocadre.ai** and **(619) 324-3223**. `[V:live]`
+
+No scheduling link is published, and no other address or number is. Do not emit one.
 
 ## The bot's own handoff path
 Because no real-time human channel is verifiable, the bot offers a **lead capture form**
@@ -14,7 +16,7 @@ Keywords: human, person, someone, agent, representative, rep, help, support, tal
 
 > I can't connect you to someone live, but I can take your details and pass them to the
 > Cadre team. I can't promise a response time — that's up to them. You can also reach them
-> directly at https://www.cadreai.com/contact.
+> directly at https://www.cadreai.com/contact, on hello@gocadre.ai, or (619) 324-3223.
 
 Fields (all optional except one contact method):
 `name` · `work email` · `company` · `what you're trying to solve` ·
@@ -54,5 +56,5 @@ bot couldn't help, no apology paragraph.** One short acknowledgement, the contac
 form. Getting out of the way is the feature.
 
 Sources:
-- https://www.cadreai.com/contact (extract, 2026-09-16)
+- https://www.cadreai.com/contact (live read, 2026-09-16)
 - Cadre AI Candidate Take-Home Challenge v1.1, "What to Build" scenarios (BRIEF)

@@ -11,7 +11,7 @@
  * created by the bot that exists to prevent exactly that.
  */
 
-import { KB_URL_ALLOWLIST } from '../kb/kb.generated'
+import { KB_URL_ALLOWLIST, KB_EMAIL_ALLOWLIST } from '../kb/kb.generated'
 
 /** Matches a full URL, and also a bare host like `portal.cadreai.com/login`. */
 const URL_LIKE =
@@ -38,6 +38,18 @@ function canonical(raw: string): string {
 const ALLOWED: ReadonlySet<string> = new Set(KB_URL_ALLOWLIST.map(canonical))
 
 /**
+ * Email addresses get the same treatment as links, for the same reason: the bot
+ * may give one Cadre publishes and must never invent a plausible-looking one.
+ * They are matched BEFORE the URL pattern, because the domain half of an address
+ * is host-shaped -- without this, `hello@gocadre.ai` came out as
+ * `hello@[link removed]`, mangling the most useful answer the bot has.
+ */
+const EMAIL_LIKE = /\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b/gi
+const ALLOWED_EMAILS: ReadonlySet<string> = new Set(KB_EMAIL_ALLOWLIST.map((e) => e.toLowerCase()))
+
+const EMAIL_REDACTION = '[address removed \u2014 not one Cadre publishes]'
+
+/**
  * True when this looks like a link at all.
  *
  * Guards against stripping ordinary prose: "e.g." and "i.e." match a naive
@@ -60,14 +72,29 @@ export interface FilterResult {
 export function filterUrls(text: string, allowed: ReadonlySet<string> = ALLOWED): FilterResult {
   const removed: string[] = []
 
-  const filtered = text.replace(URL_LIKE, (match) => {
+  // Emails first, and the surviving ones are placeholdered so the URL pass
+  // cannot see their host half.
+  const kept: string[] = []
+  const withoutEmails = text.replace(EMAIL_LIKE, (match) => {
+    if (!ALLOWED_EMAILS.has(match.toLowerCase())) {
+      removed.push(match)
+      return EMAIL_REDACTION
+    }
+    kept.push(match)
+    return `\u0000EMAIL${kept.length - 1}\u0000`
+  })
+
+  const filtered = withoutEmails.replace(URL_LIKE, (match) => {
     if (!isLinkLike(match)) return match
     if (allowed.has(canonical(match))) return match
     removed.push(match)
     return REDACTION
   })
 
-  return { text: filtered, removed }
+  // Restore the addresses that were allowed through.
+  const restored = filtered.replace(/\u0000EMAIL(\d+)\u0000/g, (_, i: string) => kept[Number(i)] ?? '')
+
+  return { text: restored, removed }
 }
 
 /** Exposed so the health endpoint and tests can report what the bot may link to. */

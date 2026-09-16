@@ -4,36 +4,34 @@ Cadre AI's four core service lines: **AI Strategy, AI Leadership & Facilitation,
 AI Engineering, AI Agents**. `[V:brief]`
 
 ## AI Strategy
-- Transforms a business with a proven AI strategy built on an **8-pillar approach**;
-  Cadre states it has guided **200+ companies** from uncertainty to measurable impact. `[V:snippet]`
+- Transforms a business with a proven AI strategy built on an **8-pillar approach**. `[V:live]`
 - Framing: real AI transformation requires **finding the right problems, preparing people
-  to lead the change, and implementing solutions that drive measurable results**. `[V:snippet]`
+  to lead the change, and implementing solutions that drive measurable results**. `[V:live]`
 - Cadre runs a structured **45-day AI Transformation Intensive** that takes a company from
   zero clarity to a prioritized roadmap its own team can execute, finding quick wins with
-  measurable EBITDA impact before building and implementing the roadmap. `[V:snippet]`
+  measurable EBITDA impact before building and implementing the roadmap. `[V:live]`
   Source page: https://www.cadreai.com/strategy
 
 ## AI Leadership & Facilitation
 - Moves executives and teams from **AI-hesitant to AI-ambitious**, through facilitation
-  backed by **behavioral science** and real-world implementation experience. `[V:snippet]`
+  backed by **behavioral science** and real-world implementation experience. `[V:live]`
   Source page: https://www.cadreai.com/leadership-facilitation
 
 ## AI Engineering
 - Builds **workflow automations and AI systems** that integrate disconnected tools and add
-  intelligence to repetitive processes, so teams can focus on high-value work. `[V:snippet]`
+  intelligence to repetitive processes, so teams can focus on high-value work. `[V:live]`
 - Goal stated publicly: make the tech stack **work as one unified system** — syncing data
   in real time, triggering actions across platforms, eliminating manual copy-paste
-  between tools. `[V:snippet]`
+  between tools. `[V:live]`
   Source page: https://www.cadreai.com/ai-engineering
 
 ## AI Agents
 - **Voice agents** handle intake, qualification, support and internal routing, turning
-  calls into clean data and next steps. `[V:snippet]`
+  calls into clean data and next steps. `[V:live]`
 - For more complex workflows Cadre builds agents that **plan, take actions across tools,
-  and run end-to-end processes with guardrails and human oversight**. `[V:snippet]`
-- Cadre's own published example of agent work includes AI voice and chat agents unifying
-  communication channels with SaaS integration for availability checking and automatic
-  booking. `[V:snippet]`
+  and run end-to-end processes with guardrails and human oversight**. `[V:live]`
+- Simpler tier: **prompts and assistants** that plug into daily work and automate
+  repeatable tasks. `[V:live]`
   Source page: https://www.cadreai.com/agents
 
 ## What the bot says
@@ -66,7 +64,7 @@ never a range, never "typically".
 
 Sources:
 - Cadre AI Candidate Take-Home Challenge v1.1, "About Cadre AI" table (BRIEF)
-- https://www.cadreai.com/strategy (extract, 2026-09-16)
-- https://www.cadreai.com/leadership-facilitation (extract, 2026-09-16)
-- https://www.cadreai.com/ai-engineering (extract, 2026-09-16)
-- https://www.cadreai.com/agents (extract, 2026-09-16)
+- https://www.cadreai.com/strategy (live read, 2026-09-16)
+- https://www.cadreai.com/leadership-facilitation (live read, 2026-09-16)
+- https://www.cadreai.com/ai-engineering (live read, 2026-09-16)
+- https://www.cadreai.com/agents (live read, 2026-09-16)

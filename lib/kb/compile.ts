@@ -90,6 +90,8 @@ export interface CompileResult {
    * bot is allowed to say and the thing it is allowed to emit cannot drift.
    */
   urlAllowlist: string[]
+  /** Every email address the KB asserts. Same purpose, same drift guarantee. */
+  emailAllowlist: string[]
   errors: string[]
   /** Facts dropped for being below `minVerification`, by file. */
   dropped: Record<string, number>
@@ -98,6 +100,14 @@ export interface CompileResult {
 }
 
 const URL_RE = /https?:\/\/[^\s)<>\]"'`,]+/g
+/**
+ * Email addresses asserted in the KB.
+ *
+ * They need the same treatment as URLs: the bot may give one Cadre publishes and
+ * must never invent a plausible-looking one. Collected here so the output filter
+ * and the content the bot may cite come from the same list.
+ */
+const EMAIL_RE = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g
 const VERIFICATION_TAG_RE = /`?\[V:(\w+)\]`?/g
 const SOURCES_LINE_RE = /^Sources?:/
 const KEYWORDS_LINE_RE = /^Keywords:\s*(.+)$/
@@ -328,6 +338,13 @@ export function compileKb(
     for (const u of sourcesText.match(URL_RE) ?? []) citedUrls.add(normalizeUrl(u))
   }
 
+  // Emails are collected from the body rather than from Sources blocks: a
+  // Sources block cites pages, and the address is a fact ON one of those pages.
+  const emails = new Set<string>()
+  for (const f of files) {
+    for (const e of f.raw.match(EMAIL_RE) ?? []) emails.add(e.toLowerCase())
+  }
+
   // Pass 2: gate facts, collect FAQ entries, validate every asserted URL.
   for (const f of files) {
     const parsed = parseFile(f.name, f.raw, opts, citedUrls)
@@ -360,6 +377,7 @@ export function compileKb(
     kb: sections.join('\n\n---\n\n'),
     faq,
     urlAllowlist: [...citedUrls].sort(),
+    emailAllowlist: [...emails].sort(),
     errors,
     dropped,
     kept,
@@ -432,7 +450,9 @@ export function main(): number {
     `${tsHeader()}export const COMPILED_KB = ${JSON.stringify(result.kb)}\n\n` +
       `export const COMPILED_KB_TOKENS = ${tokens}\n\n` +
       `/** Every URL kb/ cites. The output filter strips anything not in here. */\n` +
-      `export const KB_URL_ALLOWLIST: readonly string[] = ${JSON.stringify(result.urlAllowlist, null, 2)}\n`,
+      `export const KB_URL_ALLOWLIST: readonly string[] = ${JSON.stringify(result.urlAllowlist, null, 2)}\n\n` +
+      `/** Every email address kb/ asserts. Anything else is stripped. */\n` +
+      `export const KB_EMAIL_ALLOWLIST: readonly string[] = ${JSON.stringify(result.emailAllowlist, null, 2)}\n`,
   )
 
   writeFileSync(
