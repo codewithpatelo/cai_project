@@ -128,7 +128,18 @@ straight answer in seconds, so I can decide whether to talk to someone.*
 - **AC2.5** Given a 375px-wide viewport, when the page loads, then there is no horizontal scroll.
 - **AC2.6** The live URL is pasted into this file, below.
 
-> **Deployed URL:** _(fill in at Phase 2)_
+> **Deployed URL:** _not deployed._ The build environment's egress policy returns 403 for
+> `api.vercel.com`, `openrouter.ai` and `cadreai.com`, and no Cadre project exists in either
+> the Vercel team or the Supabase organisation — both hold only an unrelated `casa-creativa`
+> project, so the "infrastructure provisioned" line in `HANDOFF.md` did not hold.
+>
+> Everything up to the deploy is done and verified locally: `pnpm build` succeeds, and a
+> running production server was exercised for AC2.3 (400 with a human sentence on a
+> 2,500-character message), AC2.4 (no key name or material in any client chunk), and the
+> degradation path (no key and no ledger yields a correct static answer and an escalation,
+> never an error event). AC2.1, AC2.2 and AC2.5 need the public URL.
+>
+> See `docs/decisions.md` ADR-016 and the deployment runbook in `README.md`.
 
 **TC**
 - TC2.1 `openrouter.ts` parses usage from a fixture final chunk; a missing usage block yields `costSource:'estimated'`.

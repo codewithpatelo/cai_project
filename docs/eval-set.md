@@ -142,3 +142,36 @@ verifies nothing.
       regenerated with `-u`.
 - [ ] Claude invented something plausible-but-wrong at least once today; I checked this
       diff specifically for that. (Especially: URLs, API field names, config option names.)
+
+---
+
+## Run record
+
+| Date | Section | Cases | Pass rate | Real $ spent | Notes |
+|---|---|---|---|---|---|
+| 2026-09-16 | — | 0 | **not run** | **$0.00** | Blocked: see below |
+
+**The eval set has not been run against the real model.** The build environment's egress
+policy returns 403 for `openrouter.ai`, so no provider call is possible from it. Nothing was
+spent, on either key.
+
+What exists instead, and what it does and does not prove:
+
+- `scripts/eval.ts` implements every case above with the assertion vocabulary, the
+  `EVAL_BUDGET_USD` cap checked after every case, and `eval-results/<iso>.json` output.
+- `scripts/eval.test.ts` runs the **assertions** against hand-written model answers with no
+  network at all: a padded eight-pillar list fails A10, an invented portal link fails A7, a
+  quoted price fails B1, a leaked prompt fails C1, a fake system message fails C3. This
+  proves the assertions catch what they are meant to catch. It does **not** prove the model
+  passes them.
+- The runner refuses to start on `OPENROUTER_KEY_PROFILE=client`, with no key, with a
+  non-positive cap, or on an unknown section. Those refusals are tested.
+
+**To run it** (requires egress to `openrouter.ai` and the **dev** key):
+
+```bash
+OPENROUTER_KEY_PROFILE=dev OPENROUTER_API_KEY=<dev key> EVAL_BUDGET_USD=0.40 pnpm eval all
+```
+
+Section C ships green or it does not ship. Until this table has a real row, that gate is
+**unverified**, not passed.

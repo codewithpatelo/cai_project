@@ -307,3 +307,113 @@ Per the brief, ambiguity is resolved and recorded rather than escalated:
    design time. The key is consumed **only** from the hosting environment's variables, so
    this changes nothing structurally; it is noted so the build phase doesn't stall looking
    for it. No call was made with any key during the design pass.
+
+---
+
+# Build-phase ADRs
+
+Decisions taken during implementation. Each one is a place where the design met a fact it
+had not anticipated.
+
+### ADR-016 — The live KB audit could not run; verification is a build-time gate instead
+
+**Context.** `kb/README.md` and `HANDOFF.md` both require `/kb-audit --live` to run before
+Phase 2 puts the bot on a public URL. The build environment's egress policy returns 403 for
+`cadreai.com` (and for `openrouter.ai` and `api.vercel.com`), so the live re-read is
+impossible here, exactly as it was during the design pass.
+
+**Decision.** Rather than treat verification as a manual step someone remembers, the
+compiler carries a gate. `KB_MIN_VERIFICATION` drops every fact below a chosen tier:
+building with `brief` produces a smaller, fully-verified bot from the 7 `[V:brief]` facts
+plus the escalation paths, which are policy rather than sourced claims and therefore
+survive. The default remains `snippet` so local development and the eval set exercise the
+full KB, and `pnpm kb:compile` prints a loud warning naming the count of unverified facts.
+
+**Consequence.** The decision moves from "did anyone remember to audit?" to a build flag
+with a visible default. A public deploy should either pass the live audit or build with
+`KB_MIN_VERIFICATION=brief`. The 27 `[V:snippet]` facts remain unverified and are marked
+as such.
+
+**Status.** Live audit still outstanding. This is a mitigation, not a substitute.
+
+### ADR-017 — One KB fact deleted as unsourced; the tag census was wrong
+
+**Context.** An offline audit of `kb/` found the counts in `HANDOFF.md` (8 `[V:brief]` /
+31 `[V:snippet]` / 0 `[V:live]`) did not match the files: the real figures were 7 / 28 / 0.
+It also found that the Construction bullet in `03-industries.md` — "agents that analyse
+construction plans… reduce estimating time from days to hours" — carried `[V:snippet]` but
+cited no page, and that no construction page appears in the KB's own inventory.
+
+**Decision.** Delete the bullet. Construction survives as one of the industries Cadre
+names, which is `[V:brief]` and needs no page. Eval case A4 previously asserted the
+takeoff/estimating example and now expects the honest answer instead.
+
+**Consequence.** The bot loses a specific, attractive-sounding capability claim and keeps a
+verified one. `docs/mock/Main.dc.html` still *shows* the bot giving the deleted answer; the
+mock was left alone because mocks are `ui-designer`'s to change, but it is now a known
+discrepancy between the mock and what the bot may say.
+
+**Also fixed:** a verification tag only counts when it ends a line. `04-getting-started.md`
+mentions `[V:live]` mid-sentence while explaining the convention, and a naive parser read
+that as a verified fact.
+
+### ADR-018 — No ledger store means STATIC, not an in-process counter
+
+**Context.** The chat route needs a `LedgerStore`. The tempting fallback when Supabase is
+not configured is `MemoryLedgerStore`, which is already written and already tested.
+
+**Decision.** Return no governor at all, and serve STATIC.
+
+**Consequence.** On serverless, instances do not share memory, so a per-instance counter
+under-counts spend by exactly the concurrency factor. A ceiling that under-counts is not a
+ceiling; it is a ceiling-shaped decoration that passes its own tests. `/api/health` reports
+`ledger: "unconfigured"` so a deployment serving only canned answers is visible from
+outside rather than looking healthy while doing nothing.
+
+### ADR-019 — Simulation mode bypasses the store entirely, and what that costs
+
+**Context.** Spec §9 requires simulated state to be read-only. The governor implementation
+went further: under simulation, `authorize()`, `record()` and `snapshot()` skip the store
+completely, including the rate-limit counters.
+
+**Decision.** Keep the wider interpretation, and make its cost visible.
+
+**Consequence.** The demo survives an unreachable store, which is the point of having it.
+But a simulated deployment has no live rate limiting, and — the sharper edge — a simulated
+*low* spend would return `allowed: true` with a real model id while `record()` writes
+nothing, so real money would be spent and never accounted for. The intended demo forces a
+*high* spend (`GOVERNOR_SIM_SPENT_USD=4.10`), which lands on STATIC and costs nothing.
+`GOVERNOR_SIM_ENABLED` must stay unset in production, and `/api/health` reports
+`simulated` so a misconfiguration is visible without opening the dashboard.
+
+### ADR-020 — The URL filter matches bare hostnames, not just full URLs
+
+**Context.** The KB deliberately names `portal.cadreai.com`, `app.cadreai.com` and
+`cadreai.com/login` as inventions, because telling the model they are fabricated is what
+stops it producing one. That means those strings are in the model's context by design.
+
+**Decision.** The output-side filter matches host-shaped strings with or without a scheme,
+and compares canonically (scheme, `www.`, trailing slash and case all normalised).
+
+**Consequence.** A filter that only matched `https://…` would let the bare form straight
+through — the exact form the KB put in front of the model. Canonical comparison also stops
+`cadreai.com/contact` being stripped while `https://www.cadreai.com/contact` is allowed,
+which would have been an obvious bug in the other direction. The filter runs on accumulated
+text at whitespace boundaries rather than per token, because a URL can arrive split across
+streaming chunks and a per-token filter would never see one whole.
+
+### ADR-021 — Two specification errors corrected rather than worked around
+
+**Context.** `docs/principles.md` §1 says a wrong spec is fixed before the code.
+
+**Decision and consequence.**
+
+1. **AC0.2 and rubric row F1** asserted that `git log -p | grep -iE 'sk-or-|service_role'`
+   returns nothing. Both texts contain the string `service_role`, so the grep could never
+   return nothing and the criterion could never pass. Both now match key *shape* — an
+   OpenRouter key literal or a JWT — which is what actually matters. `lib/guardrails.test.ts`
+   runs the same assertion over the working tree.
+2. **AC1.1** described a `Sources:` block per `##` section. Every file in `kb/` carries one
+   file-level block instead, and `kb/README.md` rule 5 states the URL allow-list repo-wide.
+   The compiler enforces the real structure: a file asserting facts must cite sources, and a
+   URL may appear anywhere in `kb/` only if some `Sources:` block cites it.
