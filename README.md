@@ -8,6 +8,8 @@ governor paces spend and degrades in steps rather than running out.
 Two properties matter more than any feature: **it never states a Cadre fact that isn't in
 `kb/` with a source**, and **it never runs out of money**.
 
+**Live:** https://cai-project-gray.vercel.app
+
 ## Quick start
 
 ```bash

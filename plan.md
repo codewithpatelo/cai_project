@@ -128,18 +128,27 @@ straight answer in seconds, so I can decide whether to talk to someone.*
 - **AC2.5** Given a 375px-wide viewport, when the page loads, then there is no horizontal scroll.
 - **AC2.6** The live URL is pasted into this file, below.
 
-> **Deployed URL:** _not deployed._ The build environment's egress policy returns 403 for
-> `api.vercel.com`, `openrouter.ai` and `cadreai.com`, and no Cadre project exists in either
-> the Vercel team or the Supabase organisation — both hold only an unrelated `casa-creativa`
-> project, so the "infrastructure provisioned" line in `HANDOFF.md` did not hold.
+> **Deployed URL:** **https://cai-project-gray.vercel.app** — live, production.
 >
-> Everything up to the deploy is done and verified locally: `pnpm build` succeeds, and a
-> running production server was exercised for AC2.3 (400 with a human sentence on a
-> 2,500-character message), AC2.4 (no key name or material in any client chunk), and the
-> degradation path (no key and no ledger yields a correct static answer and an escalation,
-> never an error event). AC2.1, AC2.2 and AC2.5 need the public URL.
+> Verified against the deployed artefact, not locally:
+> - **AC2.4** — every client chunk fetched and inspected: no key material, and no
+>   `OPENROUTER_API_KEY` / `DEEPSEEK_API_KEY` / `SUPABASE_*` name appears anywhere in the
+>   bundle. The key is read server-side inside the route handler only.
+> - **AC2.6** — this line.
+> - `/api/health` returns `keyProfile:"dev"`, `modelConfigured:true`, `kbTokens:5813`.
+> - First paint carries the `aria-live` region empty, the six chips as real `<button>`
+>   elements, the tier badge, and the pre-paint theme script inline in `<head>`.
 >
-> See `docs/decisions.md` ADR-016 and the deployment runbook in `README.md`.
+> **Still on the static tier:** `ledger:"unconfigured"`. `SUPABASE_URL`,
+> `SUPABASE_SERVICE_ROLE_KEY` and `TELEMETRY_SALT` are not set, so the governor fails
+> closed and every answer is served from the zero-cost STATIC tier. That is the designed
+> behaviour, and it is what AC2.1/AC2.2 need before they can be judged against a real
+> model response.
+>
+> Two deployment traps, both now in `README.md` §2: the repository's default branch has no
+> application code, and a first build from it leaves the project pinned to framework
+> "Other" with output directory `public`, which then fails every later build. `vercel.json`
+> pins `"framework": "nextjs"` so the repository carries the answer.
 
 **TC**
 - TC2.1 `openrouter.ts` parses usage from a fixture final chunk; a missing usage block yields `costSource:'estimated'`.
