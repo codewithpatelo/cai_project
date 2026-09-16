@@ -41,9 +41,10 @@ pnpm eval           # COSTS REAL MONEY. See /eval. Never run unprompted.
 ```
 
 Custom commands: `/verify` (before commit) · `/eval` (capped spend) · `/deploy-check`
-(before/after deploy) · `/kb-audit` (unsourced facts) · `/rca` (root-cause a bug).
+(before/after deploy) · `/kb-audit` (unsourced facts) · `/rca` (root-cause a bug) ·
+`/judge` (final score, run last).
 Subagents: `kb-curator` · `governor-engineer` · `ui-designer` · `researcher` · `tester` ·
-`eval-runner` · `simulated-user` · `reviewer`. Definitions in `.claude/`.
+`eval-runner` · `simulated-user` · `reviewer` · `final-judge`. Definitions in `.claude/`.
 
 ## Structure
 
@@ -59,7 +60,7 @@ app/api/health/route.ts  Non-secret status.
 app/(ui)/                Presentation.
 docs/                    Design docs. principles · architecture · governor-spec ·
                          model-selection · system-prompt · design-system · eval-set ·
-                         decisions · demo-script.
+                         decisions · demo-script · rubric.
 docs/mock/*.dc.html      Reference UI mocks. Build to these; don't reinterpret them.
 ```
 
@@ -136,6 +137,11 @@ Before you say something is done:
 5. Touched the governor? Walk the §5 state table in `docs/governor-spec.md` and confirm a
    test covers each row you affected.
 6. Run `/verify` and complete the checklist in `docs/eval-set.md`. Actually complete it.
+
+**Before submission, run `/judge`.** It scores the project against Cadre's own five weighted
+dimensions with observable criteria (`docs/rubric.md`), reports the gate failures first, and
+names the three things costing the most points. It grades what exists, not what's planned —
+so run it once everything is deployed, not while a phase is half-built.
 
 ## What NOT to do
 
