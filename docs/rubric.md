@@ -115,6 +115,7 @@ even if it works.
 | 4.5 | Eval evidence is recorded | Date, pass rate, real dollars spent; injection section green | `docs/eval-set.md` |
 | 4.6 | KB has zero unverified facts | No `[V:snippet]` remaining | `grep -c "\[V:snippet\]" kb/*.md` → 0 |
 | 4.7 | AI-generated bugs were caught | Evidence of a real catch — a commit fixing a plausible-but-wrong generation | `git log --grep="fix"` and read |
+| 4.8 | Responsive and accessible as built | No horizontal scroll at 320px; keyboard-complete with visible focus; ≥4.5:1 in **both** themes; theme persists and doesn't flash | Resize to 320, Tab through, measure contrast, reload in dark |
 
 **Probe:** pick a random function and ask what it does and why it's there. Hesitation scores
 ≤2 — the brief says explicitly this is what the code deep-dive tests.

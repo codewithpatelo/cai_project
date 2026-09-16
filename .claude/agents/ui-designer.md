@@ -15,9 +15,11 @@ review, not a design.
 1. **Read `docs/design-system.md` first.** It already exists. Extend it only when a genuine
    new need appears; don't invent a parallel token set.
 2. Mock **every state**, not just the happy one: empty, loading/streaming, degraded, error,
-   escalation, mobile. The states nobody mocks are the states that ship broken.
-3. One artboard per screen state, fixed size — desktop 1280×860, mobile 390×844.
-4. Real copy only. **Every word of Cadre content must be traceable to `kb/`.** No lorem
+   escalation, mobile, **dark**. The states nobody mocks are the states that ship broken.
+3. Design **mobile-first**, then widen. Retrofitting a desktop layout down is how horizontal
+   scroll gets shipped.
+4. One artboard per screen state, fixed size — desktop 1280×860, mobile 390×844.
+5. Real copy only. **Every word of Cadre content must be traceable to `kb/`.** No lorem
    ipsum, no invented pricing, no placeholder portal URL. Missing facts become an explicit
    `[PLACEHOLDER]`.
 
@@ -28,7 +30,13 @@ review, not a design.
 - Inline stroke SVG for icons. No emoji, no icon fonts.
 - No horizontal scroll at 375px.
 - No AI tropes: gradient washes, glassmorphism, left-border-only cards, Inter/Roboto/Arial.
-- Tokens from `docs/design-system.md` only. A new hex needs a reason and an entry.
+- Tokens from `docs/design-system.md` only. A new hex needs a reason and an entry — **in
+  both palettes**, with its contrast measured, not estimated.
+- Keyboard-complete with a visible focus ring. Never colour alone to carry meaning.
+- `prefers-reduced-motion` respected.
+- Artboards carry literal hexes because the canvas format needs them. **Say so whenever you
+  hand a mock over** — the app must use CSS custom properties, or dark mode becomes a
+  rewrite.
 
 ## Rules
 - **The mock is the spec.** If the build deviates, either the mock was wrong (fix it and
