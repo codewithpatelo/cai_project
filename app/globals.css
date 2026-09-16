@@ -1,0 +1,4 @@
+@import "tailwindcss";
+
+/* Design tokens land here in Phase 6 (docs/design-system.md § Token architecture).
+   This file is the ONLY place in app/ allowed to contain a literal hex. */
