@@ -5,3 +5,10 @@ process.env.OPENROUTER_API_KEY = ''
 process.env.SUPABASE_URL = ''
 process.env.SUPABASE_SERVICE_ROLE_KEY = ''
 process.env.OPENROUTER_KEY_PROFILE = 'dev'
+
+// jsdom implements no layout, so scrollIntoView does not exist there. Stubbing it
+// here keeps the guard out of application code -- the browser API is universally
+// available in the environment the app actually runs in.
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView() {}
+}

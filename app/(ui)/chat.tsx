@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useChat, type Tier } from './use-chat'
 import { SUGGESTIONS } from '@/lib/chat/suggestions'
 import { HandoffForm } from './handoff-form'
+import { ThemeToggle } from './theme-toggle'
 import { getSessionId } from './use-chat'
 
 /**
@@ -50,7 +51,7 @@ export function Chat() {
   const empty = state.turns.length === 0
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
+    <div className="app">
       {/*
         Mounted at the root and never unmounted. A live region created at the
         moment content arrives announces nothing.
@@ -61,19 +62,11 @@ export function Chat() {
 
       <Header tier={state.tier} simulated={state.simulated} />
 
-      <main
-        style={{
-          flex: 1,
-          width: '100%',
-          maxWidth: '760px',
-          margin: '0 auto',
-          padding: '24px 16px 0',
-        }}
-      >
+      <main className="gutter" style={{ flex: 1, paddingTop: '24px' }}>
         {empty ? (
           <EmptyState onPick={submit} disabled={state.streaming} />
         ) : (
-          <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '16px' }}>
+          <ol className="transcript">
             {state.turns.map((turn, i) => (
               <Bubble
                 key={i}
@@ -122,16 +115,7 @@ function Header({ tier, simulated }: { tier: Tier; simulated: boolean }) {
         padding: '12px 16px',
       }}
     >
-      <div
-        style={{
-          maxWidth: '760px',
-          margin: '0 auto',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          flexWrap: 'wrap',
-        }}
-      >
+      <div className="gutter" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', padding: 0 }}>
         <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '19px' }}>
           Cadre AI
         </span>
@@ -139,6 +123,7 @@ function Header({ tier, simulated }: { tier: Tier; simulated: boolean }) {
         <span style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
           {simulated ? <Pill label="Simulated" color="var(--warn)" background="var(--warn-soft)" /> : null}
           <Pill label={TIER_LABEL[tier]} color={TIER_COLOR[tier]} background="var(--neutral-soft)" dot />
+          <ThemeToggle />
         </span>
       </div>
     </header>
@@ -247,20 +232,7 @@ function Bubble({
   const isUser = role === 'user'
   return (
     <li style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
-      <div
-        style={{
-          maxWidth: isUser ? '70%' : '78%',
-          padding: '10px 14px',
-          borderRadius: isUser
-            ? `var(--radius-bubble) var(--radius-bubble) var(--radius-tail) var(--radius-bubble)`
-            : `var(--radius-bubble) var(--radius-bubble) var(--radius-bubble) var(--radius-tail)`,
-          background: isUser ? 'var(--accent-soft)' : 'var(--raised)',
-          border: isUser ? '1px solid transparent' : '1px solid var(--border)',
-          color: 'var(--ink)',
-          whiteSpace: 'pre-wrap',
-          overflowWrap: 'anywhere',
-        }}
-      >
+      <div className={`bubble ${isUser ? 'bubble-user' : 'bubble-bot'}`}>
         <span className="sr-only">{isUser ? 'You said: ' : 'Assistant said: '}</span>
         {linkify(content).map((part, i) =>
           typeof part === 'string' ? (
@@ -301,21 +273,14 @@ function Composer({
   disabled: boolean
 }) {
   return (
-    <div
-      style={{
-        position: 'sticky',
-        bottom: 0,
-        background: 'var(--surface)',
-        borderTop: '1px solid var(--border)',
-        padding: '12px 16px',
-      }}
-    >
+    <div className="composer-bar">
       <form
         onSubmit={(e) => {
           e.preventDefault()
           onSubmit(draft)
         }}
-        style={{ maxWidth: '760px', margin: '0 auto' }}
+        className="gutter"
+        style={{ paddingLeft: 0, paddingRight: 0 }}
       >
         <div style={{ display: 'flex', gap: '8px' }}>
           <label htmlFor="composer" className="sr-only">
@@ -356,8 +321,14 @@ function Composer({
               cursor: disabled ? 'default' : 'pointer',
               opacity: disabled || draft.trim().length === 0 ? 0.6 : 1,
             }}
+            aria-label="Send message"
           >
-            Send
+            <span className="send-label">Send</span>
+            <span aria-hidden="true" className="send-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M4 12h15M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
           </button>
         </div>
         <p style={{ color: 'var(--ink-subtle)', fontSize: '12px', margin: '8px 0 0' }}>

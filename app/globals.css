@@ -124,3 +124,87 @@ a:hover { color: var(--accent-hover); }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Layout.
+ *
+ * Mobile-first: the small layout is the base and min-width queries add to it.
+ * Retrofitting downwards is how horizontal scroll gets shipped.
+ * Three sizes, one layout -- there is no breakpoint zoo and no separate mobile
+ * build (docs/design-system.md § Responsive).
+ * ------------------------------------------------------------------------- */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  /* dvh, never vh: under the iOS keyboard 100vh pushes the composer off-screen. */
+  min-height: 100dvh;
+}
+
+.gutter {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.transcript {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+
+.bubble {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  color: var(--ink);
+  white-space: pre-wrap;
+  /* Long URLs must wrap rather than widen the page. */
+  overflow-wrap: anywhere;
+  max-width: 90%;
+}
+
+.bubble-user {
+  background: var(--accent-soft);
+  border-color: transparent;
+  border-radius: var(--radius-bubble) var(--radius-bubble) var(--radius-tail) var(--radius-bubble);
+}
+
+.bubble-bot {
+  background: var(--raised);
+  border-radius: var(--radius-bubble) var(--radius-bubble) var(--radius-bubble) var(--radius-tail);
+}
+
+.composer-bar {
+  position: sticky;
+  bottom: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+/* The send button's text label is hidden on the narrowest screens; the button
+   keeps its accessible name through aria-label, so nothing is lost to a
+   screen reader when the visible text goes. */
+.send-label { display: none; }
+
+@media (min-width: 480px) {
+  .gutter { padding-left: 24px; padding-right: 24px; }
+  .bubble { max-width: 85%; }
+  .send-label { display: inline; }
+}
+
+@media (min-width: 900px) {
+  .gutter { padding-left: 32px; padding-right: 32px; }
+  .bubble-bot { max-width: 78%; }
+  .bubble-user { max-width: 70%; }
+}
+
+/* The send icon replaces the word on narrow screens, and steps aside for it
+   above 480px so the button is not both icon and label. */
+.send-icon { display: inline-flex; }
+@media (min-width: 480px) { .send-icon { display: none; } }
