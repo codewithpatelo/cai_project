@@ -65,7 +65,18 @@ select governor_incr('t:probe', 1, 60);
 select governor_incr('t:probe', 1, 60);
 ```
 
-### 2. Vercel — third-party Git import (no GitHub connection)
+### 2. Vercel — the branch trap, first
+
+Whatever import route is used, **set the Production Branch to
+`claude/design-build-handoff-jpyrjr`** (Vercel → Settings → Git → Production Branch).
+
+The repository's default branch is `claude/cadre-ai-chatbot-design-olwwtw`, which holds the
+design documents and no application code. A build from it does not fail loudly — it
+"completes" in about 60ms with no output, and every route then returns 404. That looks like
+a broken application rather than a build of the wrong branch, so check the build log's
+`Cloning … (Branch: …)` line before debugging anything else.
+
+### 2a. Vercel — third-party Git import (no GitHub connection)
 
 A GitHub account can hold a Vercel Login Connection for only one Vercel account, so if that
 connection already belongs to another account, linking the usual way is unavailable and
