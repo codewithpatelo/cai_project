@@ -11,6 +11,11 @@ description: Pre- and post-deploy verification of the public URL. Run before eve
    `GOVERNOR_KEY_EXPIRES_AT`.
 3. `GOVERNOR_SIM_ENABLED` is **unset** in production. A simulated budget in production is a
    bot that thinks it's broke, or worse, one that thinks it's rich.
+4. **Key profile is right for the environment (ADR-014).** Vercel *Production* must carry
+   the client key with `OPENROUTER_KEY_PROFILE=client`; *Preview* and *Development* must
+   carry the dev key with `OPENROUTER_KEY_PROFILE=dev`. **A preview deployment left on the
+   client key silently drains an unregenerable $5** — check this every time, it is the
+   cheapest possible catch for the most expensive possible mistake.
 4. `pnpm build` succeeds locally, including the KB compile step.
 5. Confirm `MODEL_PRIMARY` and `MODEL_ECONOMY` are **pinned ids**, not `~latest` aliases
    (ADR-013). An alias can change model, price and behaviour with no deploy on our side.
@@ -26,7 +31,8 @@ description: Pre- and post-deploy verification of the public URL. Run before eve
 ```bash
 curl -s https://<url>/api/health | jq
 ```
-Expect `ok:true`, a tier, `simulated:false`, and **no secrets in the payload**.
+Expect `ok:true`, a tier, `simulated:false`, `keyProfile:"client"`, and **no secrets in the
+payload**. `keyProfile` is reported precisely so this mistake is visible from outside.
 
 Then, in a browser:
 1. "What does Cadre AI do?" → streams, grounded, under ~120 words.
@@ -49,10 +55,9 @@ Then unset both and confirm PRIMARY returns.
 
 ## Supabase checks
 - `governor_ledger`, `leads` and `governor_incr` exist; RLS is **on** with no public policy.
-- The Supabase project is **not paused**. The free tier pauses after 7 days of no activity,
-  and this key's whole life is 7 days. `/api/health` touches the ledger, so running
-  `/deploy-check` resets the timer — but verify the dashboard before review day rather
-  than assuming.
+- The service-role key is set server-side only; the anon key appears nowhere that matters.
+- `select key from governor_ledger` shows **`client:`-prefixed rows only** in production.
+  A `dev:` row in the production namespace means the profile was wrong at some point.
 
 ## Record
 Paste the live URL into `plan.md` Phase 2 and note the deploy time. If anything above

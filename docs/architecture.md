@@ -50,7 +50,7 @@ Full table with escalation mappings: `kb/09-boundaries.md`.
 ## 2. Stack
 
 **Next.js 15 (App Router) + TypeScript on Vercel**, Node runtime, SSE streaming.
-**Supabase Postgres** (via the PostgREST API) for the governor ledger and leads. Tailwind
+**Supabase Postgres (Pro)** (via the PostgREST API) for the governor ledger and leads. Tailwind
 for the UI. Vitest for tests.
 
 Chosen because it is the fastest path from zero to a public HTTPS URL with streaming, it is
@@ -154,8 +154,9 @@ Returns `{ok:true}` and a reference — and the UI copy says exactly what that m
 for the team, no promised response time.
 
 ### `GET /api/health`
-`{ ok, tier, spentUsdLifetime, daysRemaining, simulated }` — no secrets, no PII. Used by
-`/deploy-check` and for the demo.
+`{ ok, tier, spentUsdLifetime, daysRemaining, simulated, keyProfile }` — no secrets, no
+PII. `keyProfile` is `'client' | 'dev'` (ADR-014), exposed so a misconfigured deployment is
+visible from outside without reading Vercel's dashboard. Used by `/deploy-check` and the demo.
 
 ## 5. Data model
 
@@ -165,8 +166,11 @@ Two tables and one function. That is the entire persistence layer.
 -- Every counter the governor owns: lifetime spend, per-day spend, rate-limit
 -- windows. One shape, because they are all "a number that sometimes expires".
 create table governor_ledger (
-  key         text primary key,        -- 'spend:lifetime' | 'spend:day:2026-09-23'
-                                       -- | 'rl:ip:<hmac>:<window>'
+  key         text primary key,        -- '<ns>:spend:lifetime'
+                                       -- | '<ns>:spend:day:2026-09-23'
+                                       -- | '<ns>:rl:ip:<hmac>:<window>'
+                                       -- <ns> is 'client' or 'dev' (ADR-014), so a dev
+                                       -- deployment cannot move the client's tier
   value       double precision not null default 0,
   expires_at  timestamptz              -- null = never
 );

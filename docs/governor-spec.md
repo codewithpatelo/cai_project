@@ -35,6 +35,7 @@ export interface ModelTier {
 }
 
 export interface GovernorConfig {
+  namespace: string;             // prefixes every ledger key; isolates budgets
   totalBudgetUsd: number;        // hard lifetime ceiling
   reserveUsd: number;            // carved out, spendable only inside reserveWindow
   reserveWindow: { startIso: string; endIso: string };
@@ -104,6 +105,17 @@ export interface CallUsage {
 }
 ```
 
+### Ledger namespacing
+
+`GovernorConfig` carries a `namespace: string`. **Every ledger and rate-limit key is
+prefixed with it**, so two deployments sharing one database keep entirely separate budgets,
+pacing curves and degradation states.
+
+This is what makes a development budget safe: a dev deployment runs `namespace: 'dev'` and
+its spend is physically incapable of moving the production tier, consuming the production
+daily allowance, or touching the production reserve. It is not a convention that someone
+has to remember — it is in the key.
+
 ```ts
 // lib/governor/index.ts — the whole public surface, five functions
 export function createGovernor(cfg: GovernorConfig, store: LedgerStore): Governor;
@@ -172,9 +184,8 @@ Concretely: the ledger call times out at **400 ms**; a timeout *is* unavailabili
 retry. There is no in-process counter fallback, because serverless instances don't share one
 and a per-instance counter would under-count by exactly the concurrency factor.
 
-A paused or unreachable Supabase project therefore degrades the bot to STATIC rather than
-taking it down — which is the correct behaviour, and worth knowing about because Supabase's
-free tier pauses projects after 7 days of no activity.
+An unreachable store therefore degrades the bot to STATIC rather than taking it down, which
+is the correct behaviour.
 
 ## 4. Pacing
 

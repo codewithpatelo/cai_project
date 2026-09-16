@@ -37,7 +37,8 @@ short-lived connections; REST connections establish far faster and sidestep pool
 fail — handled by fail-closed (ADR-006), which turns an availability problem into a
 degraded-but-honest experience. Postgres also has no native TTL, so expiry is expressed in
 the upsert rather than by the engine; an expired row resets in place, so there is no cleanup
-job to forget. And the free tier pauses after 7 days of inactivity — see R6.
+job to forget. The account is on the Pro plan, so free-tier
+inactivity pausing does not apply.
 **What this validated.** The swap from Redis to Postgres touched the adapter and the config
 and nothing else. That is `LedgerStore` being a real port rather than a decorative one
 (ADR-005), and it is the cheapest possible evidence that the layering works.
@@ -196,6 +197,33 @@ which re-runs the budget arithmetic and the evals.
 already re-reads prices and fails on >20% drift, which surfaces the common case.
 
 ---
+### ADR-014 — Two OpenRouter keys: dev for building, client for production only
+**Decision.** Two keys and a `OPENROUTER_KEY_PROFILE` that selects between them.
+`dev` (our own, top-uppable) runs local development, every preview deploy, and every eval
+run. `client` (the $5 / 7-day key) is set **only** in Vercel's Production environment and is
+spent only by real visitors and the live review. The profile also sets the governor's ledger
+`namespace`, so the two budgets are separate rows in the database.
+**Alternatives.** One key everywhere with discipline and a low eval cap — the original plan.
+**Why.** The client key **cannot be regenerated**. Under a single-key plan, every ordinary
+engineering act — a debugging loop, a mistyped prompt, a re-run eval, a preview deploy
+someone forgot about — spends from the thing that has to survive until Wednesday 20:00Z. The
+$0.40 eval cap existed to manage exactly that pressure, and it made the *verification*
+weaker: 32 cases at $0.0063 is $0.20, so the cap allowed one run and one retry, and any real
+prompt-tuning loop was unaffordable. With a dev key the eval set can be run as often as the
+prompt changes, which is how it should have worked all along.
+**Why namespacing rather than just two keys.** Two keys alone would still write to one
+ledger, so dev spend would move the client's pacing curve and could push production into
+ECONOMY or STATIC for reasons that have nothing to do with real traffic. Prefixing every
+ledger and rate-limit key with the profile makes the isolation structural instead of a rule
+someone has to remember.
+**Trade-off.** One more environment variable, one more thing `/deploy-check` must verify
+(production on `client`, preview on `dev` — a preview accidentally on `client` silently
+drains the budget). Worth it: this removes the dev machine, the largest exposure surface,
+from the blast radius of an unregenerable key.
+**Consequence.** `EVAL_BUDGET_USD` rises from $0.40 to $2.00, because it now protects our
+own wallet rather than the client's $5.
+
+---
 
 ## Risk register
 
@@ -205,8 +233,8 @@ already re-reads prices and fails on >20% drift, which surfaces the common case.
 | R2 | **Bot hallucinates a Cadre fact** — especially a portal URL | Medium | High | KB-only grounding; `Not published` blocks; output-side URL allow-list (catches it regardless of *why* the model said it); eval assertions `no_url_outside_allowlist`, `no_price`; `/kb-audit` | Novel phrasings may still produce an ungrounded sentence; the URL filter bounds the damage |
 | R3 | **Deploy breaks near the review** | Medium | High | Deploy in Phase 2, then continuously; `/deploy-check` after every deploy; Vercel instant rollback to the last good deployment | A bad deploy at the wrong minute; rollback is <1 min |
 | R4 | **Public URL abused / scripted** | Medium | High | Per-IP 8/min + 80/day, per-session 6/min + 40 lifetime, 2,000-char message cap. 80/day/IP bounds one abuser to ~$0.50/day. Caps are re-derived whenever the model price changes | Distributed abuse across IPs; ceiling + fail-closed remain the backstop |
-| R5 | **API key leaked** | Low | Fatal | Env vars only; server-only handler; never in repo, history, logs, bundle or error text; `/verify` greps the staged diff and the full history | If leaked: revoke at OpenRouter immediately, rotate, redeploy. The $5 cap bounds the loss |
-| R6 | **Supabase outage, or free-tier project paused** | Low | Medium | Fail closed → STATIC; bot stays up and honest. The free tier pauses after **7 days of no activity** — exactly this key's lifespan — so `/deploy-check` verifies the project is awake, and `/api/health` touching the ledger resets the timer | Degraded answers for the outage duration |
+| R5 | **Client API key leaked or burned** | Low | Fatal | Env vars only; server-only handler; never in repo, history, logs, bundle or error text; `/verify` greps the staged diff and the full history. **The client key is never used in development** (ADR-014), which removes the largest exposure surface: a dev machine | Cannot be regenerated. If leaked, the $5 cap bounds the loss but the demo may have to run on STATIC |
+| R6 | **Supabase outage** | Low | Medium | Fail closed → STATIC. Bot stays up and honest. Pro plan, so free-tier inactivity pausing does not apply | Degraded answers for the outage duration |
 | R7 | **OpenRouter outage or model deprecation** | Low | Medium | Two models configured; any upstream failure → STATIC after one retry | Both Google models unavailable simultaneously → STATIC only |
 | R8 | **Prompt injection** | Medium | Low | Nothing to steal (no tools, no account access, no secrets in context) + structural data/instruction separation + output URL filter | Off-brand output; bounded by design, not by the model behaving |
 | R9 | **Prices move during the 7 days** | Low | Medium | `/deploy-check` re-reads prices and fails on >20% drift, forcing recalculation | Mid-window change between deploys |

@@ -49,6 +49,9 @@ Phases **1, 3 and 6** are mutually independent and are the designated parallel w
   `docs/architecture.md` §5 applied (two tables, one function, RLS on).
 - `OPENROUTER_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` set **in Vercel only** and in a
   local `.env.local` that is already gitignored.
+- **Key profiles wired (ADR-014):** dev key + `OPENROUTER_KEY_PROFILE=dev` locally and in
+  Vercel *Preview*; client key + `=client` in Vercel *Production* only. The client key is
+  never pasted into `.env.local`.
 
 **Files:** `package.json`, `tsconfig.json`, `.gitignore`, `.env.example`, `vitest.config.ts`
 

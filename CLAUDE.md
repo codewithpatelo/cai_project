@@ -21,7 +21,7 @@ Everything below exists to protect those two.
 |---|---|
 | Framework | Next.js 15, App Router, TypeScript strict |
 | Host | Vercel (Node runtime, SSE streaming) |
-| Store | Supabase Postgres, via the PostgREST API (never a direct connection) |
+| Store | Supabase Postgres (Pro), via the PostgREST API (never a direct connection) |
 | LLM | OpenRouter → `google/gemini-3.8-flash` (primary) / `google/gemini-3.1-flash-lite` (degraded). Pinned ids, never `~latest` aliases |
 | UI | Tailwind, no component library |
 | Tests | Vitest |
@@ -61,10 +61,13 @@ docs/                    Design docs. architecture · governor-spec · model-sel
 
 ## Hard rules — violating any of these means the change is wrong
 
-1. **The OpenRouter key lives only in Vercel env vars and a local `.env.local`.**
+1. **Keys live only in Vercel env vars and a local `.env.local`.**
    Never in the repo, never in git history, never in a log line, never in a client bundle,
    never in a `NEXT_PUBLIC_*` variable, never in an error message, never in a test fixture.
    `.env.local` is gitignored — verify before every commit, not after.
+   **Two OpenRouter keys (ADR-014): dev and client.** The client's $5/7-day key
+   **cannot be regenerated** and is set only in Vercel *Production*. Local and preview run
+   the dev key. Never paste the client key into `.env.local`.
 2. **Never invent a Cadre fact.** No URL, price, person, client, certification, SLA,
    pillar name, or capability that isn't in `kb/` with a source. If you find yourself
    writing a plausible cadreai.com URL, stop: that is the exact bug this product exists to
@@ -80,8 +83,9 @@ docs/                    Design docs. architecture · governor-spec · model-sel
    governor and the UI is two commits. The reviewer reads this history.
 7. **Fail closed.** If the governor can't account for spend, it doesn't call the model.
    No timeout-and-proceed, no "probably fine", no in-process fallback counter.
-8. **Never run `pnpm eval` or any real-model call without being asked.** Every run spends
-   from a fixed $5 that cannot be topped up.
+8. **Real-model calls run on the dev key.** `pnpm eval` and any manual probing must have
+   `OPENROUTER_KEY_PROFILE=dev`. Spending the client's $5 is reserved for real visitors and
+   the live review — check the profile before you run, not after.
 9. **Don't change scope on your own.** The IN/OUT/LATER table in `docs/architecture.md` is
    decided. If something seems missing, say so; don't build it.
 
