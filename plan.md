@@ -292,9 +292,15 @@ degradation visible, so I can judge the product rather than learn the UI.*
 - **AC7.2** Given section C (injection), when run, then **every case passes** — this section does not ship yellow.
 - **AC7.3** Given `/kb-audit`, when run, then zero `[V:snippet]` tags remain.
 - **AC7.4** Given reported vs estimated cost per case, when compared, then drift is <10%; above that is a governor accounting bug and outranks any case failure.
+- **AC7.5** Given the deployed URL and a complete build, when `/judge` runs, then Gate 0 and Gate 1 both pass, and the three highest-cost findings are recorded in `docs/decisions.md` with what was done about each.
 
 **Files** `scripts/eval.ts` · `docs/eval-set.md` · `docs/decisions.md` · `kb/*.md`
 **Commit** `test: end-to-end eval run and knowledge base verification` · **Est** 45m
+
+**Then, last: `/judge`.** Everything built, committed and deployed first — the judge grades
+what exists, and a phase that isn't built scores 0. Work its findings by points recovered
+per hour, not by severity; the deadline is real. A **Gate 1 failure is a stop**, not a
+scoring note.
 
 ---
 
@@ -315,6 +321,7 @@ That is what makes them safely parallel — not that they feel independent, but 
 | `eval-runner` | `scripts/eval.ts`, `eval-results/` | `docs/eval-set.md` | everything else |
 | `simulated-user` | nothing | the deployed URL | everything |
 | `reviewer` | nothing | the diff | everything |
+| `final-judge` | nothing | rubric, repo, live URL | everything |
 
 **Recommended fan-out, once, after Phase 0:**
 `kb-curator` (running `/kb-audit --live`) ∥ `governor-engineer` (Phase 3) — while the main

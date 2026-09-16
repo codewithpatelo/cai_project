@@ -51,10 +51,10 @@ brief scenarios, because STATIC makes no provider call at all.
 
 ## State
 
-**Done — 9 commits, pushed, branch `claude/cadre-ai-chatbot-design-olwwtw`:**
-`CLAUDE.md`, `plan.md` (spec-driven, 8 phases), 9 docs, 5 UI mocks, 10 KB files, 8 subagents,
-5 custom commands, `.env.example`. **14 ADRs** with the reasoning behind every non-obvious
-choice.
+**Done — 12 commits, pushed, branch `claude/cadre-ai-chatbot-design-olwwtw`:**
+`CLAUDE.md`, `plan.md` (spec-driven, 8 phases), 10 docs, 5 UI mocks, 10 KB files,
+9 subagents, 6 custom commands, `.env.example`. **14 ADRs** with the reasoning behind every
+non-obvious choice, and `docs/rubric.md` — the scorecard this will be graded against.
 
 **Not done:** all 8 phases. Nothing in `lib/`, `app/` or `package.json` exists.
 
@@ -138,6 +138,7 @@ sequential.
 | `simulated-user` | After Phases 4 and 6 — finds what assertions can't |
 | `eval-runner` | Only when asked. Spends money |
 | `reviewer` | After Phase 3, and before submission |
+| `final-judge` | **Last, via `/judge`** — scores against Cadre's own five weighted dimensions |
 
 `researcher`, `reviewer` and `simulated-user` write nothing and can run any time.
 
@@ -189,6 +190,9 @@ best argument for running `researcher` before you build:
   **Section C (injection) ships green or it doesn't ship.**
 - `docs/decisions.md` carries an ADR for every mid-build deviation.
 - Zip with `.git`, without `node_modules` / `dist` / `build` / venv.
+- **`/judge` run, Gate 0 and Gate 1 both clear**, and its top three findings addressed or
+  disclosed in `docs/decisions.md`. It grades what exists, not what's planned, so run it
+  once everything is deployed.
 
 ## If you run out of time
 
