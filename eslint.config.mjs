@@ -9,7 +9,7 @@ const config = [
   {
     // docs/mock is design-time reference material rendered by a standalone Node
     // script; it is not application source and is not bundled.
-    ignores: ['.next/**', 'node_modules/**', 'lib/kb/*.generated.ts', 'eval-results/**', 'docs/mock/**'],
+    ignores: ['.next/**', 'node_modules/**', 'lib/kb/*.generated.ts', 'eval-results/**', 'docs/mock/**', 'next-env.d.ts'],
   },
   {
     rules: {

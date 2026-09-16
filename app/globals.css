@@ -1,4 +1,126 @@
 @import "tailwindcss";
 
-/* Design tokens land here in Phase 6 (docs/design-system.md § Token architecture).
-   This file is the ONLY place in app/ allowed to contain a literal hex. */
+/*
+ * Design tokens. THE ONLY file in app/ allowed to contain a literal hex.
+ *
+ * The mocks in docs/mock/ carry hexes inline because the canvas format paints
+ * them that way. Copying those into components is the mistake that looks harmless
+ * for two hours and then makes dark mode a rewrite -- so components reference
+ * var(--*) and nothing else. `pnpm lint` has no opinion here; lib/guardrails.test.ts
+ * greps app/ for hexes and fails.
+ *
+ * Values and contrast ratios: docs/design-system.md § Tokens.
+ */
+
+:root {
+  --surface: #FBFAF7;
+  --raised: #FFFFFF;
+  --ink: #1A1D1A;
+  --ink-muted: #4F554F;
+  --ink-subtle: #6B726B;
+  --border: #E3E1DA;
+  --accent: #2F5D50;
+  --accent-hover: #1F4237;
+  --accent-soft: #EAF0ED;
+  --on-accent: #FFFFFF;
+  --warn: #8A5616;
+  --warn-soft: #F6EEE3;
+  --neutral: #5C625C;
+  --neutral-soft: #EFEEE9;
+
+  --radius-tail: 4px;
+  --radius-input: 8px;
+  --radius-composer: 10px;
+  --radius-bubble: 14px;
+  --radius-pill: 999px;
+
+  --font-display: Fraunces, Georgia, 'Times New Roman', serif;
+  --font-body: 'Public Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * Dark. Not the light palette inverted: the warm cast is kept and the accent gets
+ * LIGHTER, because a deep green that reads well on paper disappears on charcoal.
+ *
+ * The :not([data-theme="light"]) guard is what lets the toggle override the OS.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --surface: #1A1A17;
+    --raised: #232420;
+    --ink: #F2F1EC;
+    --ink-muted: #B5B8B0;
+    --ink-subtle: #8C918A;
+    --border: #34352F;
+    --accent: #7FB8A4;
+    --accent-hover: #9BCBBA;
+    --accent-soft: #24312C;
+    --on-accent: #1A1A17;
+    --warn: #D9A468;
+    --warn-soft: #2E2519;
+    --neutral: #A0A59D;
+    --neutral-soft: #262723;
+  }
+}
+
+:root[data-theme="dark"] {
+  --surface: #1A1A17;
+  --raised: #232420;
+  --ink: #F2F1EC;
+  --ink-muted: #B5B8B0;
+  --ink-subtle: #8C918A;
+  --border: #34352F;
+  --accent: #7FB8A4;
+  --accent-hover: #9BCBBA;
+  --accent-soft: #24312C;
+  --on-accent: #1A1A17;
+  --warn: #D9A468;
+  --warn-soft: #2E2519;
+  --neutral: #A0A59D;
+  --neutral-soft: #262723;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  /* No horizontal scroll at 320px is a build constraint, not a final pass. */
+  overflow-x: hidden;
+}
+
+a { color: var(--accent); }
+a:hover { color: var(--accent-hover); }
+
+/* Focus is always visible. Never outline:none without a replacement. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Visible to screen readers, not to the eye. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

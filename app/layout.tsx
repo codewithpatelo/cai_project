@@ -6,12 +6,12 @@ export const metadata: Metadata = {
   description: 'Answers common questions about Cadre AI, and hands off to a human when it cannot.',
 }
 
-export function RootLayout({ children }: { children: React.ReactNode }) {
+// Default export: Next.js layouts permit only their own reserved export names,
+// which is the one exception CLAUDE.md carves out of the named-exports rule.
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>{children}</body>
     </html>
   )
 }
-
-export default RootLayout
