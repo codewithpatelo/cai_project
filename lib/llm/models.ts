@@ -14,6 +14,13 @@
 
 import type { ModelTier } from '../governor/types'
 
+/**
+ * Just the shape these functions read. Narrower than NodeJS.ProcessEnv on
+ * purpose: it lets a test pass two variables instead of a whole process
+ * environment, and it says exactly what is consumed.
+ */
+export type EnvLike = Record<string, string | undefined>
+
 const PRIMARY_ID = 'google/gemini-3.8-flash'
 const ECONOMY_ID = 'google/gemini-3.1-flash-lite'
 
@@ -34,11 +41,11 @@ function tier(id: string): ModelTier {
   return { id, ...(PRICES[id] ?? UNKNOWN_MODEL_PRICES) }
 }
 
-export function primaryTier(env: NodeJS.ProcessEnv = process.env): ModelTier {
+export function primaryTier(env: EnvLike = process.env): ModelTier {
   return tier(env.MODEL_PRIMARY ?? PRIMARY_ID)
 }
 
-export function economyTier(env: NodeJS.ProcessEnv = process.env): ModelTier {
+export function economyTier(env: EnvLike = process.env): ModelTier {
   return tier(env.MODEL_ECONOMY ?? ECONOMY_ID)
 }
 

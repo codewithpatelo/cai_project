@@ -38,7 +38,7 @@ AI Engineering, AI Agents**. `[V:brief]`
 
 ## What the bot says
 Scenario: services
-Keywords: what do you do, what does cadre do, services, offer, offerings, capabilities, help with, strategy, engineering, agents, leadership, facilitation
+Keywords: what does cadre ai do, what does cadre do, what do you do, what you do, services, service lines, offer, offerings, capabilities, what can you help, strategy, engineering, agents, leadership, facilitation, consultancy
 
 > Cadre AI is an AI strategy and implementation consultancy with four service lines: AI
 > Strategy, AI Leadership & Facilitation, AI Engineering, and AI Agents. In practice that

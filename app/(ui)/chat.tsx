@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useChat, type Tier } from './use-chat'
+import { SUGGESTIONS } from '@/lib/chat/suggestions'
 
 /**
  * The chat surface. Built to docs/mock/Empty.dc.html and Main.dc.html.
@@ -25,15 +26,6 @@ const TIER_COLOR: Record<Tier, string> = {
   STATIC: 'var(--neutral)',
 }
 
-/** The six scenarios from the brief -- what a reviewer clicks first. */
-const SUGGESTIONS = [
-  'What does Cadre AI do?',
-  'Do you work with my industry?',
-  'How do I book a call?',
-  'What is the AI Maturity Index?',
-  'How do I access the client portal?',
-  'How does Cadre approach data security?',
-]
 
 const COMPOSER_CAPTION =
   "Answers come from Cadre's public information. For pricing, account access or anything specific to you, this assistant hands off to the team."

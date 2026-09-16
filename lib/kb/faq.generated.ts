@@ -6,18 +6,22 @@ export const FAQ: readonly FaqEntry[] = [
   {
     "scenario": "services",
     "keywords": [
-      "what do you do",
+      "what does cadre ai do",
       "what does cadre do",
+      "what do you do",
+      "what you do",
       "services",
+      "service lines",
       "offer",
       "offerings",
       "capabilities",
-      "help with",
+      "what can you help",
       "strategy",
       "engineering",
       "agents",
       "leadership",
-      "facilitation"
+      "facilitation",
+      "consultancy"
     ],
     "answer": "Cadre AI is an AI strategy and implementation consultancy with four service lines: AI Strategy, AI Leadership & Facilitation, AI Engineering, and AI Agents. In practice that runs from finding the right problems and building a prioritised roadmap, through workflow automation and systems integration, to voice and chat agents that run end-to-end processes with guardrails and human oversight. If you tell me what you're trying to solve I can point you at the closest fit, or you can reach a strategist at https://www.cadreai.com/contact.",
     "source": "02-services.md"
