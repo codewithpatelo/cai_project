@@ -238,3 +238,54 @@ describe('the Supabase key is found under any name the dashboard shows', () => {
     expect(supabaseKeySource({})).toBeNull()
   })
 })
+
+describe('an empty or unparseable environment value falls back to the default', () => {
+  // Deployment platforms write unset variables as empty strings, and '' ?? d is
+  // '' -- so every default here was reachable only when a variable was truly
+  // absent. An empty ISO date becomes new Date(''), whose arithmetic is NaN all
+  // the way down, and JSON.stringify(NaN) is null: a broken pacing horizon
+  // surfaced as a tidy "daysRemaining": null rather than as an error.
+  const horizon = (env: Record<string, string | undefined>) =>
+    new Date(governorConfigFromEnv(env).keyExpiresAtIso).getTime()
+
+  it('ignores an empty expiry and keeps a parseable horizon', () => {
+    expect(Number.isNaN(horizon({ GOVERNOR_KEY_EXPIRES_AT: '' }))).toBe(false)
+  })
+
+  it('ignores a blank-but-not-empty expiry', () => {
+    expect(Number.isNaN(horizon({ GOVERNOR_KEY_EXPIRES_AT: '   ' }))).toBe(false)
+  })
+
+  it('ignores an unparseable expiry rather than producing NaN time', () => {
+    expect(Number.isNaN(horizon({ GOVERNOR_KEY_EXPIRES_AT: 'next tuesday' }))).toBe(false)
+  })
+
+  it('still honours a real expiry', () => {
+    expect(governorConfigFromEnv({ GOVERNOR_KEY_EXPIRES_AT: '2026-09-20T00:00:00Z' }).keyExpiresAtIso).toBe(
+      '2026-09-20T00:00:00Z',
+    )
+  })
+
+  it('keeps both ends of the reserve window parseable', () => {
+    const cfg = governorConfigFromEnv({ GOVERNOR_RESERVE_WINDOW_START: '', GOVERNOR_RESERVE_WINDOW_END: 'soon' })
+    expect(Number.isNaN(new Date(cfg.reserveWindow.startIso).getTime())).toBe(false)
+    expect(Number.isNaN(new Date(cfg.reserveWindow.endIso).getTime())).toBe(false)
+  })
+
+  it('ignores an empty budget rather than setting it to zero', () => {
+    expect(governorConfigFromEnv({ GOVERNOR_TOTAL_BUDGET_USD: '' }).totalBudgetUsd).toBe(5)
+  })
+
+  it('does not read an empty key profile as anything but dev', () => {
+    expect(keyProfile({ OPENROUTER_KEY_PROFILE: '' })).toBe('dev')
+    expect(keyProfile({ OPENROUTER_KEY_PROFILE: '  ' })).toBe('dev')
+  })
+
+  it('produces a finite daily allowance, which is what pacing depends on', () => {
+    // With a NaN horizon every pacing comparison is false and the governor keeps
+    // authorising PRIMARY while its budget maths means nothing.
+    const cfg = governorConfigFromEnv({ GOVERNOR_KEY_EXPIRES_AT: '' })
+    const daysMs = new Date(cfg.keyExpiresAtIso).getTime() - Date.now()
+    expect(Number.isFinite(daysMs)).toBe(true)
+  })
+})

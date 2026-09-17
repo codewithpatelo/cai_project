@@ -24,12 +24,39 @@ export type KeyProfile = 'dev' | 'client'
  * the client's non-regenerable $5 because a variable was unset.
  */
 export function keyProfile(env: EnvLike = process.env): KeyProfile {
-  return env.OPENROUTER_KEY_PROFILE === 'client' ? 'client' : 'dev'
+  return present(env.OPENROUTER_KEY_PROFILE) === 'client' ? 'client' : 'dev'
+}
+
+/**
+ * A configured value, or undefined.
+ *
+ * Deployment platforms write an unset variable as an EMPTY STRING, and `'' ?? d`
+ * is `''`, not `d`. Every default in this file was reachable only when a variable
+ * was truly absent -- and an empty ISO date then became `new Date('')`, whose
+ * arithmetic is NaN all the way down. `JSON.stringify(NaN)` is `null`, which is
+ * how a broken pacing horizon showed up as a tidy `"daysRemaining": null` rather
+ * than as an error.
+ */
+function present(raw: string | undefined): string | undefined {
+  return raw !== undefined && raw.trim() !== '' ? raw.trim() : undefined
 }
 
 function num(raw: string | undefined, fallback: number): number {
-  const parsed = Number(raw)
+  const parsed = Number(present(raw))
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
+
+/**
+ * An ISO timestamp that actually parses, or the fallback.
+ *
+ * An unparseable horizon does not fail loudly; it makes daysRemaining NaN, which
+ * makes the daily allowance NaN, which makes every pacing comparison false. The
+ * governor would keep authorising PRIMARY while its budget maths meant nothing.
+ */
+function iso(raw: string | undefined, fallback: string): string {
+  const value = present(raw)
+  if (value === undefined) return fallback
+  return Number.isNaN(new Date(value).getTime()) ? fallback : value
 }
 
 export function governorConfigFromEnv(env: EnvLike = process.env): GovernorConfig {
@@ -41,10 +68,10 @@ export function governorConfigFromEnv(env: EnvLike = process.env): GovernorConfi
     totalBudgetUsd,
     reserveUsd,
     reserveWindow: {
-      startIso: env.GOVERNOR_RESERVE_WINDOW_START ?? '2026-09-23T17:00:00Z',
-      endIso: env.GOVERNOR_RESERVE_WINDOW_END ?? '2026-09-24T01:00:00Z',
+      startIso: iso(env.GOVERNOR_RESERVE_WINDOW_START, '2026-09-23T17:00:00Z'),
+      endIso: iso(env.GOVERNOR_RESERVE_WINDOW_END, '2026-09-24T01:00:00Z'),
     },
-    keyExpiresAtIso: env.GOVERNOR_KEY_EXPIRES_AT ?? '2026-09-24T01:00:00Z',
+    keyExpiresAtIso: iso(env.GOVERNOR_KEY_EXPIRES_AT, '2026-09-24T01:00:00Z'),
     tiers: { PRIMARY: primaryTier(env), ECONOMY: economyTier(env) },
     thresholds: {
       economyAtLifetimeFraction: 0.6,
@@ -65,7 +92,7 @@ export function governorConfigFromEnv(env: EnvLike = process.env): GovernorConfi
     },
     ...(simulationFromEnv(env) ? { simulation: simulationFromEnv(env) } : {}),
     now: () => new Date(),
-    telemetrySalt: env.TELEMETRY_SALT ?? '',
+    telemetrySalt: present(env.TELEMETRY_SALT) ?? '',
   }
 }
 

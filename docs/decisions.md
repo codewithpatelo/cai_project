@@ -654,3 +654,33 @@ requirement is half a decision.
 **Watch for:** a cold lambda's first call includes a TLS handshake, so the margin is
 smaller than the steady-state number suggests. `ledgerProbe.ms` on `/api/health` is the
 number to check after any region or provider change.
+
+### ADR-028 — An empty environment variable is not an absent one
+
+**Context.** Once the ledger reached PRIMARY, `/api/health` still reported
+`"daysRemaining": null`. The field is typed `number`, so null should have been impossible.
+
+**`JSON.stringify(NaN)` is `null`.** The pacing horizon was `NaN`, and it serialised as
+something that reads like "not applicable" rather than like a fault.
+
+**Root cause, and it had already bitten twice.** Deployment platforms write an unset
+variable as an **empty string**, and `'' ?? fallback` is `''`, not the fallback. Every
+default in `governor-config.ts` was therefore reachable only when a variable was genuinely
+absent. An empty `GOVERNOR_KEY_EXPIRES_AT` became `new Date('')` → Invalid Date → NaN
+`daysRemaining` → NaN daily allowance → **every pacing comparison false**. The governor
+would have gone on authorising PRIMARY with budget maths that meant nothing: no pacing, no
+daily ceiling, and the reserve protected only by the lifetime threshold.
+
+The same shape had already produced a price of zero (per-token rates) and a store that
+401s (an empty key). Three instances of one mistake is a pattern, so it is fixed at the
+boundary rather than case by case: `present()` treats blank as absent for every read, and
+`iso()` additionally rejects a value that does not parse — an unparseable horizon is no
+safer than an empty one.
+
+**Also:** `/api/health` now reports `"INVALID"` rather than letting a non-finite number
+serialise as `null`. A diagnostic endpoint that renders a broken value as a tidy one is
+worse than no diagnostic.
+
+**The general lesson:** `??` guards against absent, not against meaningless. At a boundary
+where the values arrive as strings from somewhere you do not control, those are different
+things, and the difference is invisible until it is arithmetic.

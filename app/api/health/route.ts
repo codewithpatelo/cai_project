@@ -96,7 +96,9 @@ export async function GET(): Promise<Response> {
     ...base,
     tier: decision.tier,
     spentUsdLifetime: Number(snapshot.spentUsdLifetime.toFixed(4)),
-    daysRemaining: snapshot.daysRemaining,
+    // NaN serialises as null, which reads as "not applicable" rather than
+    // "the budget maths is broken". Say so instead.
+    daysRemaining: Number.isFinite(snapshot.daysRemaining) ? snapshot.daysRemaining : 'INVALID',
     simulated: snapshot.simulated,
     reserveRemainingUsd: Number(snapshot.reserveRemainingUsd.toFixed(4)),
     isReserveWindow: snapshot.isReserveWindow,
