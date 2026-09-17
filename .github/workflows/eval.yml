@@ -11,7 +11,14 @@ name: eval
 # Manual only. It spends the deployment's budget, bounded by the same governor
 # that bounds a visitor.
 
+# Triggered by a commit whose message contains [eval], because a
+# workflow_dispatch workflow is only registered once it reaches the repository's
+# DEFAULT branch -- and this repository's default branch carries the design
+# documents, not the code. A push trigger has no such requirement, so the run can
+# be driven from the branch the work actually lives on.
 on:
+  push:
+    branches: ['**']
   workflow_dispatch:
     inputs:
       target:
@@ -25,7 +32,14 @@ on:
 
 jobs:
   eval:
+    # Never on an ordinary push: this spends the deployment's budget.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.head_commit.message, '[eval]')
     runs-on: ubuntu-latest
+    env:
+      TARGET: ${{ inputs.target || 'https://cai-project-gray.vercel.app' }}
+      SECTION: ${{ inputs.section || 'all' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -43,7 +57,7 @@ jobs:
       - name: Health check before spending anything
         run: |
           echo "::group::/api/health"
-          curl -sS "${{ inputs.target }}/api/health" | tee health.json
+          curl -sS "$TARGET/api/health" | tee health.json
           echo
           echo "::endgroup::"
           # A deployment serving the static tier cannot be evaluated: every answer
@@ -59,7 +73,7 @@ jobs:
           "
 
       - name: Run the eval set
-        run: pnpm eval ${{ inputs.section }} --target ${{ inputs.target }}
+        run: pnpm eval "$SECTION" --target "$TARGET"
 
       - uses: actions/upload-artifact@v4
         if: always()
