@@ -216,3 +216,23 @@ describe('nothing fakes latency', () => {
     }
   })
 })
+
+describe('the transcript scrollbar is styled, not left to the browser', () => {
+  it('styles it for Firefox and for WebKit', () => {
+    expect(css).toMatch(/scrollbar-width:\s*thin/)
+    expect(css).toMatch(/scrollbar-color:\s*var\(--scrollbar-thumb\)/)
+    expect(css).toMatch(/\.transcript-scroll::-webkit-scrollbar-thumb/)
+  })
+
+  it('keeps the track transparent so it reads as part of the surface', () => {
+    expect(css).toMatch(/::-webkit-scrollbar-track \{[^}]*background:\s*transparent/)
+  })
+
+  it('takes its colour from tokens, in both themes', () => {
+    expect(css).toMatch(/\.transcript-scroll::-webkit-scrollbar-thumb \{[^}]*var\(--scrollbar-thumb\)/)
+  })
+
+  it('has a hover state', () => {
+    expect(css).toMatch(/::-webkit-scrollbar-thumb:hover/)
+  })
+})
