@@ -73,6 +73,8 @@ jobs:
           "
 
       - name: Run the eval set
+        # Paced to stay under the deployment's per-IP rate limit, so ~8s a case.
+        timeout-minutes: 20
         run: pnpm eval "$SECTION" --target "$TARGET"
 
       - uses: actions/upload-artifact@v4

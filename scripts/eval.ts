@@ -25,6 +25,19 @@ import { filterUrls } from '../lib/chat/url-filter'
 
 export type Section = 'A' | 'B' | 'C' | 'D'
 
+/**
+ * Gap between cases when driving a deployed endpoint.
+ *
+ * The deployment rate-limits a single IP to 8 requests per 60 seconds, and CI
+ * runs every case from one runner. The first run hit that at case nine and every
+ * case after it was served from the STATIC tier -- the governor working exactly
+ * as designed, against us.
+ *
+ * The eval paces itself rather than being granted a bypass. An evaluation that
+ * needs the protections switched off is not evaluating the deployed system.
+ */
+export const TARGET_PACING_MS = 8000
+
 export interface EvalCase {
   id: string
   section: Section
@@ -205,7 +218,11 @@ async function runCaseAgainstUrl(c: EvalCase, target: string): Promise<CaseResul
   // A STATIC answer is not a model answer. Scoring it as a pass would let a
   // degraded deployment report a green eval run, which is the exact failure this
   // project spent a day on.
-  if (tier === 'STATIC') failures.unshift('served from the STATIC tier, not the model')
+  if (tier === 'STATIC') {
+    failures.unshift(
+      'served from the STATIC tier, not the model (degraded deployment, or pacing below the rate limit)',
+    )
+  }
 
   return {
     id: c.id,
@@ -327,7 +344,15 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
   let spent = 0
   let aborted = false
 
+  let first = true
   for (const c of cases) {
+    // Stay under the deployment's per-IP window. Skipped for the first case and
+    // when calling the provider directly, which the deployment does not gate.
+    if (!first && target !== null) {
+      await new Promise((resolve) => setTimeout(resolve, TARGET_PACING_MS))
+    }
+    first = false
+
     const result = target === null ? await runCase(c) : await runCaseAgainstUrl(c, target)
     results.push(result)
     spent += result.costUsd
