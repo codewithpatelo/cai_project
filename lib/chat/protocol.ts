@@ -18,7 +18,7 @@ const MAX_BODY_BYTES = 32 * 1024
 interface ChatRequest {
   sessionId: string
   message: string
-  history: { role: 'user' | 'assistant'; content: string }[]
+  history: { role: 'user' | 'assistant'; content: string; sig?: string }[]
 }
 
 type Validation =
@@ -82,7 +82,10 @@ export function validate(rawBody: string): Validation {
       if (!isRecord(turn)) continue
       const { role, content } = turn
       if ((role === 'user' || role === 'assistant') && typeof content === 'string') {
-        turns.push({ role, content })
+        // The signature proves this server produced an assistant turn. It is
+        // carried, not trusted: verification happens in history-integrity.ts.
+        const sig = turn.sig
+        turns.push({ role, content, ...(typeof sig === 'string' ? { sig } : {}) })
       }
     }
   }

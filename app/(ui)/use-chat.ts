@@ -15,6 +15,12 @@ export type Tier = 'PRIMARY' | 'ECONOMY' | 'STATIC'
 export interface Turn {
   role: 'user' | 'assistant'
   content: string
+  /**
+   * Proof the server produced this answer, echoed back on the next request.
+   * Without it the server drops the turn rather than letting a forged line
+   * speak with the bot's authority (lib/chat/history-integrity.ts).
+   */
+  sig?: string
 }
 
 export interface ChatState {
@@ -158,18 +164,28 @@ export function useChat() {
             // answer -- so the badge follows `done`, or it would read
             // "Live model" over a saved answer.
             const finalTier = parsed.data.tier
-            setState((prev) => ({
-              ...prev,
-              tier:
-                finalTier === 'ECONOMY' || finalTier === 'STATIC' || finalTier === 'PRIMARY'
-                  ? finalTier
-                  : prev.tier,
-              streaming: false,
-              escalated: escalate,
-              // The finished message is announced once. Announcing tokens as they
-              // arrive floods a screen reader -- docs/design-system.md.
-              announcement: prev.turns[prev.turns.length - 1]?.content ?? 'Answer complete.',
-            }))
+            const sig = parsed.data.sig
+            setState((prev) => {
+              // Attach the signature to the answer it belongs to.
+              const turns = [...prev.turns]
+              const last = turns[turns.length - 1]
+              if (last && last.role === 'assistant' && typeof sig === 'string') {
+                turns[turns.length - 1] = { ...last, sig }
+              }
+              return {
+                ...prev,
+                turns,
+                tier:
+                  finalTier === 'ECONOMY' || finalTier === 'STATIC' || finalTier === 'PRIMARY'
+                    ? finalTier
+                    : prev.tier,
+                streaming: false,
+                escalated: escalate,
+                // The finished message is announced once. Announcing tokens as they
+                // arrive floods a screen reader -- docs/design-system.md.
+                announcement: turns[turns.length - 1]?.content ?? 'Answer complete.',
+              }
+            })
           }
         }
       }

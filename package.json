@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "kb:compile": "tsx lib/kb/compile.ts",
-    "eval": "tsx scripts/eval.ts"
+    "eval": "tsx scripts/eval.ts",
+    "audit": "pnpm audit --audit-level moderate"
   },
   "dependencies": {
     "next": "15.5.25",
@@ -43,6 +44,9 @@
       "esbuild",
       "unrs-resolver",
       "sharp"
-    ]
+    ],
+    "overrides": {
+      "postcss": ">=8.5.23"
+    }
   }
 }

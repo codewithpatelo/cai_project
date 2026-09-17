@@ -186,8 +186,29 @@ export async function GET(request: Request): Promise<Response> {
     }
   }
 
-  const wantsModelProbe = new URL(request.url).searchParams.get('probe') === 'model'
-  const modelProbe = wantsModelProbe ? await probeModel(governor, request) : undefined
+  /**
+   * The model probe spends money on a GET, which crawlers, link previewers and
+   * prefetchers follow without being asked. Rate limits bound the damage but do
+   * not stop it being spent, so it requires a shared token.
+   *
+   * With HEALTH_PROBE_TOKEN unset the probe is simply unavailable -- an
+   * unauthenticated money-spending endpoint is not a reasonable default, and
+   * OWASP LLM06:2026 is precisely about resource exhaustion.
+   */
+  const probeToken = process.env.HEALTH_PROBE_TOKEN
+  const asked = new URL(request.url).searchParams.get('probe')
+  const supplied = request.headers.get('x-probe-token') ?? new URL(request.url).searchParams.get('token')
+
+  let modelProbe: Record<string, unknown> | undefined
+  if (asked === 'model') {
+    if (probeToken === undefined || probeToken.trim() === '') {
+      modelProbe = { ok: false, stage: 'disabled', detail: 'HEALTH_PROBE_TOKEN is not set' }
+    } else if (supplied !== probeToken) {
+      modelProbe = { ok: false, stage: 'forbidden', detail: 'probe token missing or wrong' }
+    } else {
+      modelProbe = await probeModel(governor, request)
+    }
+  }
 
   return Response.json({
     ...base,
@@ -205,6 +226,8 @@ export async function GET(request: Request): Promise<Response> {
     ledgerTimeoutMs: cfg.ledgerTimeoutMs,
     /** What a real cold request actually got. The number that matters. */
     coldAuthorizeReason: decision.reason,
+    /** Whether forged assistant turns can be detected (LLM01, indirect). */
+    historyIntegrity: cfg.telemetrySalt === '' ? 'unverified (no TELEMETRY_SALT)' : 'enforced',
     ...(modelProbe === undefined ? {} : { modelProbe }),
   })
 }

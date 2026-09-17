@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, cleanup, within } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { Chat } from './chat'
 import { SUGGESTIONS } from '@/lib/chat/suggestions'
 
@@ -100,5 +102,40 @@ describe('the empty state explains what the bot is for', () => {
     render(<Chat />)
     const main = screen.getByRole('main')
     expect(within(main).getByText(/put you in touch with the team/i)).toBeTruthy()
+  })
+})
+
+describe('OWASP LLM10:2026 — model output cannot become active content', () => {
+  // The model's words are rendered, so they are untrusted input to the DOM.
+  it('renders answers as text, with no markdown or HTML interpretation', () => {
+    // No dangerouslySetInnerHTML anywhere in the transcript path: a model that
+    // emits <img onerror=...> produces those characters on screen, not an element.
+    const source = readFileSync(join(import.meta.dirname, 'chat.tsx'), 'utf8')
+    expect(source).not.toContain('dangerouslySetInnerHTML')
+  })
+
+  it('only ever builds an href from an http(s) URL', () => {
+    // linkify is the one place model output reaches an attribute. The pattern
+    // requires a scheme, so javascript:, data: and vbscript: cannot reach href --
+    // and the output filter has already stripped any URL kb/ does not cite.
+    const source = readFileSync(join(import.meta.dirname, 'chat.tsx'), 'utf8')
+    const pattern = /const re = (\/[^\n]+\/g)/.exec(source)?.[1] ?? ''
+    expect(pattern).toContain('https?:\\/\\/')
+
+    const re = new RegExp('https?:\\/\\/[^\\s<>()]+[^\\s<>().,;:!?]', 'g')
+    for (const hostile of [
+      'javascript:alert(1)',
+      'data:text/html;base64,PHNjcmlwdD4=',
+      'vbscript:msgbox(1)',
+      'JaVaScRiPt:alert(1)',
+      'file:///etc/passwd',
+    ]) {
+      expect([...hostile.matchAll(re)], hostile).toHaveLength(0)
+    }
+  })
+
+  it('opens links without handing the opener to the target', () => {
+    const source = readFileSync(join(import.meta.dirname, 'chat.tsx'), 'utf8')
+    expect(source).toMatch(/rel="noopener noreferrer"/)
   })
 })

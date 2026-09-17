@@ -21,6 +21,7 @@ import { governorConfigFromEnv, supabaseConfigFromEnv } from '@/lib/chat/governo
 import { validate, sseFrame, shouldEscalate } from '@/lib/chat/protocol'
 import { staticAnswer, chunkAnswer } from '@/lib/chat/static-responder'
 import { filterUrls } from '@/lib/chat/url-filter'
+import { verifyHistory, signAnswer } from '@/lib/chat/history-integrity'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -64,6 +65,8 @@ export async function POST(request: Request): Promise<Response> {
   const { sessionId, message, history } = validated.value
   const ip = clientIp(request)
 
+  const cfg = governorConfigFromEnv()
+
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const encoder = new TextEncoder()
@@ -82,7 +85,12 @@ export async function POST(request: Request): Promise<Response> {
         const startedAt = Date.now()
         const answer = filterUrls(staticAnswer(message)).text
         for (const piece of chunkAnswer(answer)) send('token', { t: piece })
-        send('done', { escalate: true, latencyMs: Date.now() - startedAt, tier: 'STATIC' as Tier })
+        send('done', {
+          escalate: true,
+          latencyMs: Date.now() - startedAt,
+          tier: 'STATIC' as Tier,
+          ...(cfg.telemetrySalt === '' ? {} : { sig: signAnswer(answer, cfg.telemetrySalt) }),
+        })
         void retryAfterSec
       }
 
@@ -114,7 +122,21 @@ export async function POST(request: Request): Promise<Response> {
           simulated: decision.budgetSnapshot.simulated,
         })
 
-        const trimmed = governor.trimHistory(history, decision.historyBudget)
+        // Drop any assistant turn this server cannot prove it wrote, BEFORE
+        // trimming or assembly. A forged turn carries the authority of the bot
+        // itself, which is what makes it worth forging.
+        const checked = verifyHistory(history, cfg.telemetrySalt)
+        if (checked.rejected > 0) {
+          console.warn(
+            JSON.stringify({
+              event: 'history_turns_rejected',
+              count: checked.rejected,
+              at: new Date().toISOString(),
+            }),
+          )
+        }
+
+        const trimmed = governor.trimHistory(checked.kept, decision.historyBudget)
         const messages = assemble({ compiledKb: COMPILED_KB, history: trimmed.kept, message })
 
         const generator = streamCompletion({
@@ -122,9 +144,7 @@ export async function POST(request: Request): Promise<Response> {
           messages,
           maxOutputTokens: decision.maxOutputTokens,
           tier: decision.tier,
-          pricing: decision.tier === 'ECONOMY'
-            ? governorConfigFromEnv().tiers.ECONOMY
-            : governorConfigFromEnv().tiers.PRIMARY,
+          pricing: decision.tier === 'ECONOMY' ? cfg.tiers.ECONOMY : cfg.tiers.PRIMARY,
         })
 
         // The filter runs on the accumulated answer, not per token: a URL can
@@ -182,6 +202,11 @@ export async function POST(request: Request): Promise<Response> {
               escalate: shouldEscalate(filtered.text),
               latencyMs: event.result.usage.latencyMs,
               tier: decision.tier,
+              // Signs the text the client will actually hold, so a replayed turn
+              // has to match byte for byte.
+              ...(cfg.telemetrySalt === ''
+                ? {}
+                : { sig: signAnswer(filtered.text, cfg.telemetrySalt) }),
             })
 
             // Recorded after the stream completes, because the real cost only

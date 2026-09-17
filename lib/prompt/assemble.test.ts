@@ -114,3 +114,60 @@ describe('TC1.1 — the fixed prefix, reviewed by eye', () => {
     expect(buildSystemPrompt('{{KB}}')).toMatchSnapshot()
   })
 })
+
+describe('OWASP LLM08:2026 — nothing in the hidden context needs to stay hidden', () => {
+  // OWASP's guidance is to assume hidden context is discoverable and design so
+  // that disclosing it costs nothing. Severity tracks CONTENT, not leakage: this
+  // suite pins the content at "informational" rather than trusting the prompt's
+  // own instruction not to reveal itself, which OWASP explicitly says not to
+  // rely on.
+  const system = buildSystemPrompt(COMPILED_KB)
+
+  it('carries no credential-shaped material', () => {
+    expect(system).not.toMatch(/sk-[a-z]*-?v?\d?-?[A-Za-z0-9]{16,}/)
+    expect(system).not.toMatch(/eyJ[A-Za-z0-9_-]{20,}\.eyJ/)
+    expect(system).not.toMatch(/\b(api[_-]?key|secret|password|token|bearer)\s*[:=]\s*\S/i)
+  })
+
+  it('names no environment variable a reader could go looking for', () => {
+    for (const name of [
+      'OPENROUTER_API_KEY',
+      'DEEPSEEK_API_KEY',
+      'SUPABASE_SERVICE_ROLE_KEY',
+      'SUPABASE_SECRET_KEY',
+      'TELEMETRY_SALT',
+      'HEALTH_PROBE_TOKEN',
+    ]) {
+      expect(system, `${name} must not appear in the prompt`).not.toContain(name)
+    }
+  })
+
+  it('describes no tool, function or schema the model could be steered toward', () => {
+    // There are none to describe -- the model has no tools at all (LLM03) -- and
+    // this asserts that stays true of the prompt as well as of the code.
+    expect(system).not.toMatch(/\bfunction_call|tool_choice|"parameters"\s*:/i)
+  })
+
+  it('contains no internal hostname, connection string or infrastructure detail', () => {
+    expect(system).not.toMatch(/supabase\.co|vercel\.app|postgres:\/\/|https?:\/\/localhost/i)
+  })
+
+  it('leaks nothing about the spend ceilings that would help someone exhaust them', () => {
+    // The tier a user is served is visible in the UI by design; our ceilings,
+    // windows and rate limits are not, and none of them is enforced by the
+    // prompt -- the governor enforces them in code, which is the point.
+    //
+    // Scoped to OUR budget: the knowledge base legitimately says the word
+    // "budgets" about the *customer's*, in the escalation table.
+    expect(system).not.toMatch(/GOVERNOR_|reserve window|daily allowance|spend(ing)? (cap|ceiling|limit)/i)
+    expect(system).not.toMatch(/rate.?limit(ed|ing|s)?\b/i)
+    expect(system).not.toMatch(/tokens? (budget|ceiling|cap)|max_tokens/i)
+    expect(system).not.toMatch(/\$\d|USD \d/)
+  })
+
+  it('is the whole of what the model is told, so this suite is exhaustive', () => {
+    const assembled = assemble({ compiledKb: COMPILED_KB, history: [], message: 'hi' })
+    expect(assembled.filter((m) => m.role === 'system')).toHaveLength(1)
+    expect(assembled[0]?.content).toBe(system)
+  })
+})
