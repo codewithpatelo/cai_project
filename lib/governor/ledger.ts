@@ -111,8 +111,17 @@ export interface SupabaseLedgerStoreConfig {
 
 /**
  * Supabase Postgres via the PostgREST API (never a direct connection — serverless opens
- * many short-lived connections and REST connections establish far faster). Two RPCs and
- * one filtered select cover the three-method port; see the `governor_ledger` /
+ * many short-lived connections and REST connections establish far faster).
+ *
+ * PostgREST binds RPC arguments BY NAME, so the JSON keys below must match the SQL
+ * parameter names exactly. They did not, once: this adapter called a
+ * `governor_incr_by` that was never created and passed `key`/`amount`/`ttl_sec`
+ * against a function declared `p_key`/`p_delta`/`p_ttl_seconds`. Every ledger write
+ * would have failed, the governor would have failed closed on every request, and the
+ * bot would have served canned answers forever while looking like a bad API key.
+ * `ledger.contract.test.ts` pins the names against supabase/schema.sql.
+ *
+ * One RPC and one filtered select cover the three-method port; see the `governor_ledger` /
  * `governor_incr` functions this expects on the database side.
  */
 export class SupabaseLedgerStore implements LedgerStore {
@@ -127,9 +136,11 @@ export class SupabaseLedgerStore implements LedgerStore {
   }
 
   async incrBy(key: string, amountUsd: number): Promise<number> {
-    const res = await this.request('/rest/v1/rpc/governor_incr_by', {
-      key,
-      amount: amountUsd,
+    // One RPC covers both writes: a null TTL means the counter never expires.
+    const res = await this.request('/rest/v1/rpc/governor_incr', {
+      p_key: key,
+      p_delta: amountUsd,
+      p_ttl_seconds: null,
     })
     const body: unknown = await res.json()
     return asTotal(body)
@@ -156,9 +167,9 @@ export class SupabaseLedgerStore implements LedgerStore {
 
   async expiringIncr(key: string, ttlSec: number): Promise<number> {
     const res = await this.request('/rest/v1/rpc/governor_incr', {
-      key,
-      amount: 1,
-      ttl_sec: ttlSec,
+      p_key: key,
+      p_delta: 1,
+      p_ttl_seconds: ttlSec,
     })
     const body: unknown = await res.json()
     return asTotal(body)

@@ -76,13 +76,17 @@ describe('SupabaseLedgerStore', () => {
     return vi.fn(async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch
   }
 
-  it('incrBy posts to the incr_by rpc and returns the new total', async () => {
+  it('incrBy posts to governor_incr and returns the new total', async () => {
+    // This test used to assert a `governor_incr_by` RPC that was never created.
+    // It passed, because it checked that the adapter did what the adapter did --
+    // not that the database had anything to answer with. The contract against
+    // supabase/schema.sql lives in ledger.contract.test.ts.
     const fetchImpl = fakeFetch(200, 4.2)
     const store = new SupabaseLedgerStore({ url: 'https://example.test', serviceRoleKey: 'k', fetchImpl })
     const total = await store.incrBy('ns:spend:lifetime', 1.1)
     expect(total).toBe(4.2)
     expect(fetchImpl).toHaveBeenCalledWith(
-      'https://example.test/rest/v1/rpc/governor_incr_by',
+      'https://example.test/rest/v1/rpc/governor_incr',
       expect.objectContaining({ method: 'POST' })
     )
   })

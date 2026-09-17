@@ -586,3 +586,37 @@ route.
 **Still unverified:** none of this has been seen against a real model response. Perceived
 latency with a ~1s provider call is a different problem, and only the no-model case has
 been looked at.
+
+### ADR-026 — The ledger adapter called a function that did not exist
+
+**Context.** Before asking for the Supabase service-role key to be set, the adapter was read
+against the schema that had actually been applied to the database.
+
+**They did not match, in two ways.** `SupabaseLedgerStore.incrBy` posted to
+`/rest/v1/rpc/governor_incr_by` — a function never declared anywhere. And `expiringIncr`
+posted `{key, amount, ttl_sec}` to `governor_incr`, which is declared
+`(p_key, p_delta, p_ttl_seconds)`. PostgREST binds RPC arguments **by name**, so both calls
+would have failed.
+
+**What that would have looked like.** Every ledger read and write throws → `authorize()`
+lands in its catch → fail-closed → `tier: STATIC`, `model: null`, no provider call. The bot
+would have kept answering, correctly and from canned text, forever. `/api/health` would have
+reported `ledger: "supabase"` because the variables were present. The visible symptom would
+have been "the model never runs", and the obvious suspect would have been the API key — a
+long way from the actual cause.
+
+**Why nothing caught it.** Every governor test uses `MemoryLedgerStore`, which is correct
+(CLAUDE.md forbids mocking the governor). The one Supabase test asserted that `incrBy`
+posts to `governor_incr_by` — it pinned the adapter to its own behaviour rather than to the
+database, so the bug had a passing test defending it. Typecheck and lint cannot see across
+an HTTP boundary into SQL.
+
+**Decision.** Align the adapter with `docs/architecture.md` §5 rather than the reverse: one
+`governor_incr`, with a null TTL for counters that never expire. Add
+`ledger.contract.test.ts`, which drives the real adapter through a recording `fetch` and
+compares the RPC name and every argument name against the signature parsed out of
+`supabase/schema.sql`. If either side moves, that test fails.
+
+**The general lesson:** a port tested only through its in-memory implementation is tested
+only up to the boundary that matters. The seam between the adapter and the thing it adapts
+needs its own contract test, and the in-memory double cannot provide it.
