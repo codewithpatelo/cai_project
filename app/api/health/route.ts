@@ -20,11 +20,81 @@ import {
 import { COMPILED_KB_TOKENS } from '@/lib/kb/kb.generated'
 import { activeProvider } from '@/lib/llm/provider'
 import { primaryTier } from '@/lib/llm/models'
+import { streamCompletion } from '@/lib/llm/client'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-export async function GET(): Promise<Response> {
+/**
+ * `?probe=model` makes ONE real provider call and reports the outcome.
+ *
+ * It spends money, so it goes through the governor exactly as a chat request
+ * does -- authorize, call, record -- and is therefore bounded by the same rate
+ * limits, the same daily allowance and the same reserve. A visitor hammering it
+ * is no worse than one hammering /api/chat, which is what the governor is for.
+ *
+ * It exists because config being correct and the provider answering are
+ * different claims, and only the second one matters. Everything else this
+ * endpoint reports was green for a day while every real answer came from canned
+ * text. It returns the outcome and the cost, never the generated text.
+ */
+async function probeModel(
+  governor: ReturnType<typeof createGovernor>,
+  request: Request,
+): Promise<Record<string, unknown>> {
+  const decision = await governor.authorize({ ip: clientIp(request), sessionId: 'model-probe' })
+  if (!decision.allowed || decision.model === null) {
+    return { ok: false, stage: 'authorize', reason: decision.reason, tier: decision.tier }
+  }
+
+  const startedAt = Date.now()
+  const generator = streamCompletion({
+    model: decision.model,
+    messages: [{ role: 'user', content: 'Reply with the single word: ok' }],
+    maxOutputTokens: 8,
+    tier: decision.tier,
+    pricing: governorConfigFromEnv().tiers.PRIMARY,
+  })
+
+  let chars = 0
+  for (;;) {
+    const next = await generator.next()
+    if (next.done) {
+      if (!next.value.ok) {
+        return {
+          ok: false,
+          stage: 'provider',
+          kind: next.value.error.kind,
+          status: next.value.error.status ?? null,
+          detail: next.value.error.detail,
+          ms: Date.now() - startedAt,
+        }
+      }
+      break
+    }
+    if (next.value.type === 'token') chars += next.value.text.length
+    else {
+      await governor.record({ ...next.value.result.usage, sessionId: 'model-probe' })
+      return {
+        ok: true,
+        stage: 'complete',
+        ms: next.value.result.usage.latencyMs,
+        replyChars: chars,
+        costUsd: next.value.result.usage.costUsd,
+        costSource: next.value.result.usage.costSource,
+      }
+    }
+  }
+  return { ok: false, stage: 'provider', detail: 'stream ended with no completion' }
+}
+
+/** The client's IP, only ever used to build a rate-limit key. */
+function clientIp(request: Request): string {
+  const forwarded = request.headers.get('x-forwarded-for')
+  return forwarded?.split(',')[0]?.trim() ?? 'health-probe'
+}
+
+export async function GET(request: Request): Promise<Response> {
   const cfg = governorConfigFromEnv()
   const supabase = supabaseConfigFromEnv()
 
@@ -116,6 +186,9 @@ export async function GET(): Promise<Response> {
     }
   }
 
+  const wantsModelProbe = new URL(request.url).searchParams.get('probe') === 'model'
+  const modelProbe = wantsModelProbe ? await probeModel(governor, request) : undefined
+
   return Response.json({
     ...base,
     tier: decision.tier,
@@ -132,5 +205,6 @@ export async function GET(): Promise<Response> {
     ledgerTimeoutMs: cfg.ledgerTimeoutMs,
     /** What a real cold request actually got. The number that matters. */
     coldAuthorizeReason: decision.reason,
+    ...(modelProbe === undefined ? {} : { modelProbe }),
   })
 }
