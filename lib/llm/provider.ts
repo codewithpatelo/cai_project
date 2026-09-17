@@ -9,7 +9,7 @@
  * a fallback when only a DeepSeek key is available.
  */
 
-import type { EnvLike } from './models'
+import { present, type EnvLike } from './models'
 
 export type ProviderId = 'openrouter' | 'deepseek'
 
@@ -80,9 +80,10 @@ export function isProviderId(value: string): value is ProviderId {
 export function activeProvider(env: EnvLike = process.env): Provider {
   const configured = env.LLM_PROVIDER
   let id: ProviderId = 'openrouter'
-  if (configured !== undefined && configured.trim() !== '' && isProviderId(configured.trim())) {
-    id = configured.trim() as ProviderId
-  } else if (env.DEEPSEEK_API_KEY && env.DEEPSEEK_API_KEY.trim() !== '') {
+  const explicit = present(configured)
+  if (explicit !== undefined && isProviderId(explicit)) {
+    id = explicit
+  } else if (present(env.DEEPSEEK_API_KEY) !== undefined) {
     // A key under the VENDOR's own name is a deliberate statement about which
     // service it belongs to. The generic variable is not: this project told
     // people to put a DeepSeek key in OPENROUTER_API_KEY, so "both are set"
@@ -99,8 +100,8 @@ export function activeProvider(env: EnvLike = process.env): Provider {
       id === 'openrouter'
         ? {
             // Attribution only; both are safe to be public.
-            'HTTP-Referer': env.OPENROUTER_APP_URL ?? '',
-            'X-Title': env.OPENROUTER_APP_TITLE ?? '',
+            'HTTP-Referer': present(env.OPENROUTER_APP_URL) ?? '',
+            'X-Title': present(env.OPENROUTER_APP_TITLE) ?? '',
           }
         : {},
   }

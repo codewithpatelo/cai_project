@@ -416,7 +416,9 @@ export function main(): number {
   const repoRoot = join(here, '..', '..')
   const kbDir = join(repoRoot, 'kb')
 
-  const minVerification = (process.env.KB_MIN_VERIFICATION ?? 'snippet') as string
+  const raw = process.env.KB_MIN_VERIFICATION
+  // An empty variable is absent, not a choice -- see lib/llm/models.ts present().
+  const minVerification = raw !== undefined && raw.trim() !== '' ? raw.trim() : 'snippet'
   if (!isVerification(minVerification)) {
     console.error(`kb:compile: KB_MIN_VERIFICATION must be snippet|brief|live, got "${minVerification}"`)
     return 1

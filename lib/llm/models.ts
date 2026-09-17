@@ -22,6 +22,19 @@ import { defaultModels } from './provider'
  */
 export type EnvLike = Record<string, string | undefined>
 
+/**
+ * A configured value, or undefined.
+ *
+ * Deployment platforms write an unset variable as an EMPTY STRING, and
+ * `'' ?? fallback` is `''`. This project has now been bitten four times by that
+ * one fact: a per-token price of zero, a store key that 401s, a NaN pacing
+ * horizon, and an EMPTY MODEL ID posted to the provider -- which fails with a
+ * 400 that reads exactly like a bad key. Every env read goes through here.
+ */
+export function present(raw: string | undefined): string | undefined {
+  return raw !== undefined && raw.trim() !== '' ? raw.trim() : undefined
+}
+
 const PRIMARY_ID = 'google/gemini-3.8-flash'
 const ECONOMY_ID = 'google/gemini-3.1-flash-lite'
 
@@ -52,8 +65,9 @@ const PRICES: Record<string, Omit<ModelTier, 'id'>> = {
  * So an empty or blank value is absent, not free.
  */
 function rate(raw: string | undefined): number | null {
-  if (raw === undefined || raw.trim() === '') return null
-  const parsed = Number(raw)
+  const value = present(raw)
+  if (value === undefined) return null
+  const parsed = Number(value)
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
 }
 
@@ -84,13 +98,13 @@ function tier(id: string): ModelTier {
 }
 
 export function primaryTier(env: EnvLike = process.env): ModelTier {
-  const id = env.MODEL_PRIMARY ?? defaultModels(env).primary
+  const id = present(env.MODEL_PRIMARY) ?? defaultModels(env).primary
   const override = priceOverride(env, 'PRIMARY')
   return override === null ? tier(id) : { id, ...override }
 }
 
 export function economyTier(env: EnvLike = process.env): ModelTier {
-  const id = env.MODEL_ECONOMY ?? defaultModels(env).economy
+  const id = present(env.MODEL_ECONOMY) ?? defaultModels(env).economy
   const override = priceOverride(env, 'ECONOMY')
   return override === null ? tier(id) : { id, ...override }
 }

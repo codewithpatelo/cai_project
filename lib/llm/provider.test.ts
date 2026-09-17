@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { activeProvider, isProviderId } from './provider'
-import { primaryTier, economyTier } from './models'
+import { primaryTier, economyTier, present } from './models'
 
 describe('provider selection', () => {
   it('defaults to OpenRouter', () => {
@@ -154,5 +154,33 @@ describe('the vendor-named key wins when both are present', () => {
     // Sending google/gemini-3.8-flash to api.deepseek.com is the same class of
     // mismatch, and produces an error that reads like a bad key.
     expect(primaryTier({ DEEPSEEK_API_KEY: 'x', OPENROUTER_API_KEY: 'x' }).id).toBe('deepseek-chat')
+  })
+})
+
+describe('no env boundary lets an empty string become a value', () => {
+  // Fourth instance of one bug: a per-token price of zero, a store key that
+  // 401s, a NaN pacing horizon, and an empty model id posted to the provider --
+  // which fails with a 400 that reads exactly like a bad key. This is the
+  // regression net for all of them.
+  it('never sends an empty model id', () => {
+    expect(primaryTier({ MODEL_PRIMARY: '' }).id).not.toBe('')
+    expect(primaryTier({ MODEL_PRIMARY: '   ' }).id).not.toBe('')
+    expect(economyTier({ MODEL_ECONOMY: '' }).id).not.toBe('')
+  })
+
+  it('falls back to the provider default when the model is blank', () => {
+    expect(primaryTier({ LLM_PROVIDER: 'deepseek', MODEL_PRIMARY: '' }).id).toBe('deepseek-chat')
+    expect(primaryTier({ MODEL_PRIMARY: '' }).id).toBe('google/gemini-3.8-flash')
+  })
+
+  it('trims a value that is merely padded rather than treating it as absent', () => {
+    expect(primaryTier({ MODEL_PRIMARY: '  deepseek-reasoner  ' }).id).toBe('deepseek-reasoner')
+  })
+
+  it('exposes one helper so this cannot be fixed in one place and missed in another', () => {
+    expect(present('')).toBeUndefined()
+    expect(present('   ')).toBeUndefined()
+    expect(present(undefined)).toBeUndefined()
+    expect(present(' x ')).toBe('x')
   })
 })

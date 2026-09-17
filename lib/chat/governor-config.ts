@@ -9,7 +9,7 @@
 
 import type { GovernorConfig } from '../governor/types'
 import { simulationFromEnv } from '../governor'
-import { primaryTier, economyTier, type EnvLike } from '../llm/models'
+import { primaryTier, economyTier, present, type EnvLike } from '../llm/models'
 
 export type KeyProfile = 'dev' | 'client'
 
@@ -25,20 +25,6 @@ export type KeyProfile = 'dev' | 'client'
  */
 export function keyProfile(env: EnvLike = process.env): KeyProfile {
   return present(env.OPENROUTER_KEY_PROFILE) === 'client' ? 'client' : 'dev'
-}
-
-/**
- * A configured value, or undefined.
- *
- * Deployment platforms write an unset variable as an EMPTY STRING, and `'' ?? d`
- * is `''`, not `d`. Every default in this file was reachable only when a variable
- * was truly absent -- and an empty ISO date then became `new Date('')`, whose
- * arithmetic is NaN all the way down. `JSON.stringify(NaN)` is `null`, which is
- * how a broken pacing horizon showed up as a tidy `"daysRemaining": null` rather
- * than as an error.
- */
-function present(raw: string | undefined): string | undefined {
-  return raw !== undefined && raw.trim() !== '' ? raw.trim() : undefined
 }
 
 function num(raw: string | undefined, fallback: number): number {

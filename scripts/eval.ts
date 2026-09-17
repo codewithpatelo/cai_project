@@ -221,7 +221,8 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     return 1
   }
 
-  const cap = Number(process.env.EVAL_BUDGET_USD ?? '2.00')
+  const rawCap = process.env.EVAL_BUDGET_USD
+  const cap = Number(rawCap !== undefined && rawCap.trim() !== '' ? rawCap : '2.00')
   if (!Number.isFinite(cap) || cap <= 0) {
     console.error('REFUSING TO RUN: EVAL_BUDGET_USD must be a positive number.')
     return 1
