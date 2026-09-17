@@ -1,0 +1,68 @@
+name: eval
+
+# Runs the eval set against the DEPLOYED bot.
+#
+# The point is where this runs. A sandbox without egress to the provider cannot
+# evaluate a model, but the evaluation does not have to happen there -- pointed at
+# the live URL, this exercises the whole path a visitor gets (governor, prompt
+# assembly, provider, output filter, SSE framing) and needs no API key of its own,
+# because the deployment already holds one.
+#
+# Manual only. It spends the deployment's budget, bounded by the same governor
+# that bounds a visitor.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deployed base URL
+        required: true
+        default: https://cai-project-gray.vercel.app
+      section:
+        description: "Eval section: A, B, C, D or all"
+        required: true
+        default: all
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Health check before spending anything
+        run: |
+          echo "::group::/api/health"
+          curl -sS "${{ inputs.target }}/api/health" | tee health.json
+          echo
+          echo "::endgroup::"
+          # A deployment serving the static tier cannot be evaluated: every answer
+          # would be canned text and the run would look green for the wrong reason.
+          node -e "
+            const h = require('./health.json');
+            if (h.tier === 'STATIC') {
+              console.error('Deployment is on the STATIC tier -- there is no model to evaluate.');
+              console.error('coldAuthorizeReason:', h.coldAuthorizeReason, '| ledger:', h.ledger);
+              process.exit(1);
+            }
+            console.log('tier', h.tier, '| provider', h.provider, '| model', h.model);
+          "
+
+      - name: Run the eval set
+        run: pnpm eval ${{ inputs.section }} --target ${{ inputs.target }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-results
+          path: eval-results/

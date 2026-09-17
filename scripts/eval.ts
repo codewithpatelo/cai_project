@@ -147,6 +147,78 @@ interface CaseResult {
   answerLength: number
 }
 
+/**
+ * Run a case against a DEPLOYED /api/chat instead of calling the provider here.
+ *
+ * This exists because the eval needs to run somewhere with network access to the
+ * provider, and that somewhere does not have to be a developer's machine. Pointed
+ * at the live URL it exercises the whole path a visitor gets -- governor,
+ * assembly, provider, output filter, SSE framing -- and needs no API key of its
+ * own, because the deployment already holds one. That is strictly more faithful
+ * than calling the provider directly: it can catch a fault in the route that a
+ * direct call never touches.
+ */
+async function runCaseAgainstUrl(c: EvalCase, target: string): Promise<CaseResult> {
+  const startedAt = Date.now()
+  const response = await fetch(new URL('/api/chat', target), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: `eval-${c.id}`, message: c.input, history: [] }),
+  }).catch(() => null)
+
+  if (response === null || !response.ok || response.body === null) {
+    return {
+      id: c.id,
+      section: c.section,
+      passed: false,
+      failures: [`endpoint returned ${response?.status ?? 'no response'}`],
+      costUsd: 0,
+      costSource: 'estimated',
+      latencyMs: Date.now() - startedAt,
+      answerLength: 0,
+    }
+  }
+
+  let answer = ''
+  let tier = ''
+  const text = await response.text()
+  for (const frame of text.split('\n\n')) {
+    let event = ''
+    const data: string[] = []
+    for (const line of frame.split('\n')) {
+      if (line.startsWith('event:')) event = line.slice(6).trim()
+      else if (line.startsWith('data:')) data.push(line.slice(5).trim())
+    }
+    if (data.length === 0) continue
+    try {
+      const parsed: unknown = JSON.parse(data.join('\n'))
+      if (typeof parsed !== 'object' || parsed === null) continue
+      const record = parsed as Record<string, unknown>
+      if (event === 'token' && typeof record.t === 'string') answer += record.t
+      if (event === 'done' && typeof record.tier === 'string') tier = record.tier
+    } catch {
+      continue
+    }
+  }
+
+  const failures = c.assertions.map((a) => a(answer)).filter((f): f is string => f !== null)
+  // A STATIC answer is not a model answer. Scoring it as a pass would let a
+  // degraded deployment report a green eval run, which is the exact failure this
+  // project spent a day on.
+  if (tier === 'STATIC') failures.unshift('served from the STATIC tier, not the model')
+
+  return {
+    id: c.id,
+    section: c.section,
+    passed: failures.length === 0,
+    failures,
+    costUsd: 0,
+    costSource: 'provider',
+    latencyMs: Date.now() - startedAt,
+    answerLength: answer.length,
+  }
+}
+
 async function runCase(c: EvalCase): Promise<CaseResult> {
   const tier = primaryTier()
   const messages = assemble({ compiledKb: COMPILED_KB, history: [], message: c.input })
@@ -206,8 +278,17 @@ async function runCase(c: EvalCase): Promise<CaseResult> {
 }
 
 export async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
+  // `--target <url>` drives a deployed endpoint. The deployment holds the key and
+  // the governor bounds the spend, so the local key preconditions do not apply.
+  const targetFlag = argv.indexOf('--target')
+  const target = targetFlag === -1 ? null : (argv[targetFlag + 1] ?? null)
+  if (targetFlag !== -1 && target === null) {
+    console.error('--target needs a URL, e.g. --target https://example.vercel.app')
+    return 1
+  }
+
   // Precondition 1, before anything can spend: never the client's key.
-  if (process.env.OPENROUTER_KEY_PROFILE === 'client') {
+  if (target === null && process.env.OPENROUTER_KEY_PROFILE === 'client') {
     console.error(
       'REFUSING TO RUN: OPENROUTER_KEY_PROFILE=client.\n' +
         'The eval set spends real money and the client key cannot be regenerated.\n' +
@@ -216,8 +297,8 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     return 1
   }
 
-  if (!process.env.OPENROUTER_API_KEY) {
-    console.error('REFUSING TO RUN: OPENROUTER_API_KEY is not set.')
+  if (target === null && !process.env.OPENROUTER_API_KEY && !process.env.DEEPSEEK_API_KEY) {
+    console.error('REFUSING TO RUN: no provider key is set, and no --target was given.')
     return 1
   }
 
@@ -228,21 +309,26 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     return 1
   }
 
-  const requested = (argv[0] ?? 'all').toUpperCase()
+  const positional = argv.filter((a, i) => !a.startsWith('--') && argv[i - 1] !== '--target')
+  const requested = (positional[0] ?? 'all').toUpperCase()
   const cases = requested === 'ALL' ? CASES : CASES.filter((c) => c.section === requested)
   if (cases.length === 0) {
     console.error(`No cases for section "${requested}". Use A, B, C, D or all.`)
     return 1
   }
 
-  console.log(`Running ${cases.length} cases, cap $${cap.toFixed(2)}. This spends real money.\n`)
+  console.log(
+    target === null
+      ? `Running ${cases.length} cases against the provider, cap $${cap.toFixed(2)}. This spends real money.\n`
+      : `Running ${cases.length} cases against ${target}. The deployment's governor bounds the spend.\n`,
+  )
 
   const results: CaseResult[] = []
   let spent = 0
   let aborted = false
 
   for (const c of cases) {
-    const result = await runCase(c)
+    const result = target === null ? await runCase(c) : await runCaseAgainstUrl(c, target)
     results.push(result)
     spent += result.costUsd
 
@@ -265,6 +351,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
   const report = {
     at: new Date().toISOString(),
     section: requested,
+    target,
     cases: results.length,
     passed,
     passRate: results.length > 0 ? passed / results.length : 0,
