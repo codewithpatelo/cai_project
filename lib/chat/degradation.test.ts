@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createGovernor, MemoryLedgerStore, FailingStore } from '../governor'
-import { governorConfigFromEnv, keyProfile } from './governor-config'
+import { governorConfigFromEnv, keyProfile, supabaseConfigFromEnv, supabaseKeySource } from './governor-config'
 import { staticAnswer } from './static-responder'
 import { filterUrls } from './url-filter'
 import type { GovernorConfig } from '../governor/types'
@@ -189,5 +189,52 @@ describe('the static threshold is derived, not hardcoded', () => {
       GOVERNOR_RESERVE_USD: '1.20',
     })
     expect(c.thresholds.staticAtLifetimeFraction).toBeCloseTo(0.88, 10)
+  })
+})
+
+describe('the Supabase key is found under any name the dashboard shows', () => {
+  // Supabase renamed the concept: the legacy service_role JWT and the newer
+  // sb_secret_… "secret key" both grant server-side access and bypass RLS.
+  // Reading one spelling makes a correctly-configured deployment behave as if it
+  // had no database at all -- and fail closed, silently and forever.
+  const url = 'https://p.supabase.co'
+
+  it('accepts SUPABASE_SERVICE_ROLE_KEY', () => {
+    expect(supabaseConfigFromEnv({ SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: 'k' })).toEqual({
+      url,
+      serviceRoleKey: 'k',
+    })
+  })
+
+  it('accepts SUPABASE_SECRET_KEY', () => {
+    expect(supabaseConfigFromEnv({ SUPABASE_URL: url, SUPABASE_SECRET_KEY: 'k' })?.serviceRoleKey).toBe('k')
+  })
+
+  it('accepts SUPABASE_SERVICE_ROLE', () => {
+    expect(supabaseConfigFromEnv({ SUPABASE_URL: url, SUPABASE_SERVICE_ROLE: 'k' })?.serviceRoleKey).toBe('k')
+  })
+
+  it('prefers the canonical name when several are set', () => {
+    const cfg = supabaseConfigFromEnv({
+      SUPABASE_URL: url,
+      SUPABASE_SERVICE_ROLE: 'old',
+      SUPABASE_SERVICE_ROLE_KEY: 'canonical',
+    })
+    expect(cfg?.serviceRoleKey).toBe('canonical')
+  })
+
+  it('treats an empty value as absent', () => {
+    // Vercel writes an unset variable as an empty string, and an empty key would
+    // configure a store that 401s on every call rather than failing closed cleanly.
+    expect(supabaseConfigFromEnv({ SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: '   ' })).toBeNull()
+  })
+
+  it('still needs the URL', () => {
+    expect(supabaseConfigFromEnv({ SUPABASE_SERVICE_ROLE_KEY: 'k' })).toBeNull()
+  })
+
+  it('reports the variable NAME that supplied the key, never the value', () => {
+    expect(supabaseKeySource({ SUPABASE_SECRET_KEY: 'super-secret' })).toBe('SUPABASE_SECRET_KEY')
+    expect(supabaseKeySource({})).toBeNull()
   })
 })

@@ -70,6 +70,28 @@ export function governorConfigFromEnv(env: EnvLike = process.env): GovernorConfi
 }
 
 /**
+ * Variable names that may hold the Supabase server-side key, in priority order.
+ *
+ * Supabase renamed the concept: the legacy `service_role` JWT and the newer
+ * `sb_secret_…` "secret key" both grant server-side access and bypass RLS, and
+ * the dashboard has shown both at different times. Accepting one spelling means a
+ * correctly-configured deployment silently behaves as if it had no database.
+ */
+const SUPABASE_KEY_NAMES = [
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'SUPABASE_SECRET_KEY',
+  'SUPABASE_SERVICE_ROLE',
+] as const
+
+/** Which variable supplied the key, or null. The NAME only -- never the value. */
+export function supabaseKeySource(env: EnvLike = process.env): string | null {
+  return SUPABASE_KEY_NAMES.find((name) => {
+    const value = env[name]
+    return value !== undefined && value.trim() !== ''
+  }) ?? null
+}
+
+/**
  * The ledger store. Supabase when configured, otherwise none.
  *
  * Returning null rather than a memory store is deliberate: an in-process store on
@@ -80,7 +102,9 @@ export function supabaseConfigFromEnv(
   env: EnvLike = process.env,
 ): { url: string; serviceRoleKey: string } | null {
   const url = env.SUPABASE_URL
-  const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !serviceRoleKey) return null
+  const source = supabaseKeySource(env)
+  if (!url || source === null) return null
+  const serviceRoleKey = env[source]
+  if (!serviceRoleKey) return null
   return { url, serviceRoleKey }
 }

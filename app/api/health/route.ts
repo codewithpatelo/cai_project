@@ -11,7 +11,12 @@
  */
 
 import { createGovernor, SupabaseLedgerStore } from '@/lib/governor'
-import { governorConfigFromEnv, keyProfile, supabaseConfigFromEnv } from '@/lib/chat/governor-config'
+import {
+  governorConfigFromEnv,
+  keyProfile,
+  supabaseConfigFromEnv,
+  supabaseKeySource,
+} from '@/lib/chat/governor-config'
 import { COMPILED_KB_TOKENS } from '@/lib/kb/kb.generated'
 
 export const runtime = 'nodejs'
@@ -25,6 +30,9 @@ export async function GET(): Promise<Response> {
     ok: true,
     keyProfile: keyProfile(),
     ledger: supabase === null ? ('unconfigured' as const) : ('supabase' as const),
+    // The variable NAME that supplied the key, never its value. Configuration is
+    // the thing that goes wrong here, and it is not a secret.
+    ledgerKeySource: supabaseKeySource(),
     modelConfigured: process.env.OPENROUTER_API_KEY ? true : false,
     kbTokens: COMPILED_KB_TOKENS,
   }
@@ -33,13 +41,25 @@ export async function GET(): Promise<Response> {
   // correct behaviour, not an outage, so `ok` stays true -- but it is reported,
   // because a deployment serving only canned answers should be obvious.
   if (supabase === null) {
+    // Name which half is missing. "Unconfigured" on its own sends whoever is
+    // debugging to look at the key when the URL is absent, or at the URL when the
+    // key is under a variable name this build does not read.
+    const missing = [
+      process.env.SUPABASE_URL ? null : 'SUPABASE_URL',
+      supabaseKeySource() === null
+        ? 'a server-side key (SUPABASE_SERVICE_ROLE_KEY, SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE)'
+        : null,
+    ].filter((m): m is string => m !== null)
+
     return Response.json({
       ...base,
       tier: 'STATIC',
       spentUsdLifetime: null,
       daysRemaining: null,
       simulated: cfg.simulation !== undefined,
-      note: 'No ledger store configured: the governor fails closed and every answer is served from the static tier.',
+      missing,
+      note:
+        'No ledger store configured: the governor fails closed and every answer is served from the static tier.',
     })
   }
 
