@@ -71,13 +71,11 @@ export function staticAnswer(question: string, faq: readonly FaqEntry[] = FAQ): 
 /**
  * Stream a static answer in small pieces.
  *
- * Deliberately shaped like a model response: the user should not be able to tell
- * that the budget ran out, only that the answer arrived. The tier badge is for
- * the reviewer, not for a prospect.
- *
- * Chunking alone does not achieve that -- see STATIC_PACING below. Enqueued in a
- * tight loop, every chunk lands in the same frame and the answer appears at once,
- * which reads as a canned response even when the words are right.
+ * Chunked so the transport is identical to a model response, and sent as fast as
+ * it can go. An earlier version slept between chunks to imitate typing; that made
+ * the product slower on purpose to paper over a missing animation, which is a bad
+ * trade in any interface. STATIC is instant because it genuinely is instant, and
+ * the entrance animation in globals.css is what makes it land smoothly.
  */
 export function* chunkAnswer(answer: string, size = 24): Generator<string> {
   const pieces = answer.split(/(\s+)/)
@@ -90,24 +88,4 @@ export function* chunkAnswer(answer: string, size = 24): Generator<string> {
     }
   }
   if (buffer.length > 0) yield buffer
-}
-
-/**
- * How the static tier is paced.
- *
- * A zero-latency answer is a tell. Real model responses have a pause before the
- * first token and then arrive progressively, and the STATIC tier's whole purpose
- * is to be indistinguishable to the user -- so it borrows that shape.
- *
- * This is deliberately added latency, which is normally a bad idea and worth
- * defending: the alternative is an interface whose feedback contradicts itself,
- * where a "thinking" cursor appears and vanishes in the same frame and the
- * transcript jumps. Both numbers are far below the ~1s a real call takes, so
- * STATIC still feels faster than the model, just not impossibly so.
- */
-export const STATIC_PACING = {
-  /** Before the first chunk: the gap where a real request would be in flight. */
-  leadInMs: 260,
-  /** Between chunks. About 28 characters at a time reads as a steady stream. */
-  betweenChunksMs: 38,
 }

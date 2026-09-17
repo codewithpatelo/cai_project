@@ -18,7 +18,7 @@ import { createGovernor, SupabaseLedgerStore } from '@/lib/governor'
 import type { Decision, Tier } from '@/lib/governor/types'
 import { governorConfigFromEnv, supabaseConfigFromEnv } from '@/lib/chat/governor-config'
 import { validate, sseFrame, shouldEscalate } from '@/lib/chat/protocol'
-import { staticAnswer, chunkAnswer, STATIC_PACING } from '@/lib/chat/static-responder'
+import { staticAnswer, chunkAnswer } from '@/lib/chat/static-responder'
 import { filterUrls } from '@/lib/chat/url-filter'
 
 export const runtime = 'nodejs'
@@ -70,33 +70,18 @@ export async function POST(request: Request): Promise<Response> {
         controller.enqueue(encoder.encode(sseFrame(event, data)))
       }
 
-      const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
       /**
        * The floor. Costs nothing, cannot fail, always has an answer.
        *
-       * Paced rather than dumped: enqueueing every chunk in one loop puts the
-       * whole answer on screen in a single frame, so the streaming cursor
-       * appears and disappears instantly and the transcript jumps. The words
-       * were right and the interface still read as broken.
+       * Sent as fast as it can go. Sleeping between chunks to imitate typing was
+       * tried and removed: it made the product slower on purpose to compensate
+       * for a missing animation. Smoothness is the UI's job, not the transport's.
        */
-      const serveStatic = async (retryAfterSec?: number) => {
+      const serveStatic = (retryAfterSec?: number) => {
         const startedAt = Date.now()
         const answer = filterUrls(staticAnswer(message)).text
-
-        await sleep(STATIC_PACING.leadInMs)
-        let first = true
-        for (const piece of chunkAnswer(answer)) {
-          if (!first) await sleep(STATIC_PACING.betweenChunksMs)
-          first = false
-          send('token', { t: piece })
-        }
-
-        send('done', {
-          escalate: true,
-          latencyMs: Date.now() - startedAt,
-          tier: 'STATIC' as Tier,
-        })
+        for (const piece of chunkAnswer(answer)) send('token', { t: piece })
+        send('done', { escalate: true, latencyMs: Date.now() - startedAt, tier: 'STATIC' as Tier })
         void retryAfterSec
       }
 
@@ -118,7 +103,7 @@ export async function POST(request: Request): Promise<Response> {
             simulated: decision?.budgetSnapshot.simulated ?? false,
             ...(decision?.retryAfterSec === undefined ? {} : { retryAfterSec: decision.retryAfterSec }),
           })
-          await serveStatic(decision?.retryAfterSec)
+          serveStatic(decision?.retryAfterSec)
           return
         }
 
@@ -162,7 +147,7 @@ export async function POST(request: Request): Promise<Response> {
           if (next.done) {
             if (!next.value.ok && !completed) {
               // Provider 429, 5xx, timeout: the user gets a real answer, not an error.
-              await serveStatic()
+              serveStatic()
             }
             break
           }
@@ -191,7 +176,7 @@ export async function POST(request: Request): Promise<Response> {
         }
       } catch {
         // Nothing reaches the user as a stack trace. Ever.
-        await serveStatic()
+        serveStatic()
       } finally {
         controller.close()
       }

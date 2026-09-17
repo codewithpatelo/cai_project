@@ -36,7 +36,7 @@ export function HandoffForm({ sessionId, topic }: { sessionId: string; topic: st
 
   if (status.kind === 'sent') {
     return (
-      <div style={cardStyle} role="status">
+      <div className="handoff-card" style={cardStyle} role="status">
         <p style={{ margin: 0, color: 'var(--ink)' }}>{status.message}</p>
       </div>
     )
@@ -87,7 +87,7 @@ export function HandoffForm({ sessionId, topic }: { sessionId: string; topic: st
   const errorId = `${ids}-error`
 
   return (
-    <div style={cardStyle}>
+    <div className="handoff-card" style={cardStyle}>
       <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '16px', margin: '0 0 4px' }}>
         Pass my details to the team
       </h2>

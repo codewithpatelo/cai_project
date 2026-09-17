@@ -114,8 +114,11 @@ describe('AC6.9 / AC6.11 — layout and motion constraints are in the stylesheet
     expect(css).not.toMatch(/min-height:\s*100vh/)
   })
 
-  it('prevents horizontal scroll', () => {
-    expect(css).toMatch(/overflow-x:\s*hidden/)
+  it('prevents the page itself from scrolling in either direction', () => {
+    // `overflow: hidden` on the page covers the horizontal case and also hands
+    // vertical scrolling to the transcript, which is the point.
+    expect(css).toMatch(/html, body \{[\s\S]*?\n\}/)
+    expect(css).toMatch(/overflow:\s*hidden|overflow-x:\s*hidden/)
   })
 
   it('lets long URLs wrap instead of widening the page', () => {
@@ -155,5 +158,61 @@ describe('motion is present but disabled under reduced-motion', () => {
   it('keeps the cursor to the specified 2px accent bar, with no dots or shimmer', () => {
     expect(css).toMatch(/\.stream-cursor[\s\S]*width: 2px[\s\S]*background: var\(--accent\)/)
     expect(css).not.toMatch(/typing-dot|shimmer|skeleton/i)
+  })
+})
+
+describe('the composer is never something you scroll to', () => {
+  it('gives the app a fixed height rather than a minimum', () => {
+    // min-height plus a sticky composer scrolls the whole page, so the input
+    // only pins itself once you have already scrolled down to it.
+    expect(css).toMatch(/\.app \{[^}]*height: 100dvh/)
+    expect(css).not.toMatch(/\.app \{[^}]*min-height/)
+  })
+
+  it('makes the transcript the only scrolling region', () => {
+    expect(css).toMatch(/\.transcript-scroll \{[^}]*overflow-y:\s*auto/)
+  })
+
+  it('lets that region actually shrink', () => {
+    // Without min-height:0 a flex child refuses to shrink below its content,
+    // the column grows instead of scrolling, and the composer leaves the screen.
+    expect(css).toMatch(/\.transcript-scroll \{[^}]*min-height:\s*0/)
+  })
+
+  it('keeps the composer out of the scrolling flow', () => {
+    expect(css).toMatch(/\.composer-bar \{[^}]*flex:\s*0 0 auto/)
+    expect(css).not.toMatch(/\.composer-bar \{[^}]*position:\s*sticky/)
+  })
+})
+
+describe('inline cards arrive rather than appear', () => {
+  it('animates the handoff card in', () => {
+    // It used to pop in fully formed the instant an answer finished, which reads
+    // as a layout glitch rather than as the bot offering something.
+    expect(css).toMatch(/@keyframes card-in/)
+    expect(css).toMatch(/\.handoff-card \{[^}]*animation: card-in/)
+  })
+
+  it('lets the answer land before the offer follows it', () => {
+    expect(css).toMatch(/\.handoff-card \{[^}]*animation: card-in [^;]*\d+ms both/)
+  })
+})
+
+describe('nothing fakes latency', () => {
+  it('has no artificial typing delay anywhere in the transport', () => {
+    // Sleeping between chunks to imitate typing made the product slower on
+    // purpose to compensate for a missing animation. Smoothness is the UI's job.
+    const responder = readFileSync(
+      join(import.meta.dirname, '..', 'lib', 'chat', 'static-responder.ts'),
+      'utf8',
+    )
+    const route = readFileSync(
+      join(import.meta.dirname, 'api', 'chat', 'route.ts'),
+      'utf8',
+    )
+    for (const src of [responder, route]) {
+      expect(src).not.toMatch(/setTimeout\(resolve/)
+      expect(src).not.toMatch(/STATIC_PACING|leadInMs|betweenChunksMs/)
+    }
   })
 })

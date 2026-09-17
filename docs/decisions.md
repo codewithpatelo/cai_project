@@ -546,37 +546,43 @@ booking".
 **Still outstanding:** the evals have never run against a real model, so section C remains
 unverified rather than passed.
 
-### ADR-025 — The STATIC tier is paced on purpose, and the UI moves
+### ADR-025 — Smoothness is the UI's job, not the transport's
 
-**Context.** With the ledger unconfigured the deployed bot serves every answer from the
-STATIC tier. The owner's first reaction to the live URL was that the interface felt rough:
-abrupt transitions, confusing feedback, and answers that appeared instantly. The natural
-reading is "it feels off because there is no model behind it".
+**Context.** The deployed bot felt rough: answers appeared in one jump, the handoff card
+popped in fully formed, and — worst — the composer was something you had to *scroll to*.
 
-**That reading was only half right.** `serveStatic` enqueued every chunk in a tight
-synchronous loop, so the entire answer landed in a single frame. `chunkAnswer` existed
-specifically to make STATIC "shaped like a model response", and without pacing it did
-nothing of the sort — the chunking was real and the streaming was not. The streaming cursor
-appeared and vanished in the same frame, and the transcript jumped from empty to complete.
+**The first attempt was wrong and is recorded here because it was wrong.** Reading "answers
+appear instantly" as a pacing problem, the static tier was given a 260ms lead-in and 38ms
+between chunks to imitate typing. That is making the product slower on purpose to
+compensate for a missing animation. The owner rejected it immediately and was right: the
+complaint was never about speed, it was about animation and visual feedback. The delays
+were removed; a test now asserts no `setTimeout` survives in either the responder or the
+route.
 
-**Decision.** Pace it: a 260ms lead-in before the first chunk, 38ms between chunks. Add a
-160ms entrance transition on message bubbles and a 1s blink on the streaming cursor.
+**What the problems actually were, all three structural:**
 
-**Deliberately adding latency needs defending.** The alternative is an interface whose own
-feedback contradicts itself — a "thinking" indicator that never gets to indicate anything.
-Both numbers sit far below the ~1s a real provider call takes, so STATIC still feels faster
-than the model, just not impossibly so; the tier's stated purpose is that a user cannot tell
-the budget ran out, and a zero-latency answer is exactly that tell. A full static answer now
-takes under 1.5s end to end, which a test asserts.
+1. **The composer was inside the scrolling flow.** `.app` had `min-height: 100dvh` and the
+   composer was `position: sticky; bottom: 0`, so the *page* scrolled and the input only
+   pinned itself once you had already scrolled down to it. No chat interface behaves that
+   way. The app is now a fixed `height: 100dvh` column, `.transcript-scroll` is the only
+   scrolling region, and the composer is a `flex: 0 0 auto` sibling that cannot leave the
+   viewport. `min-height: 0` on the scroll region is load-bearing: without it a flex child
+   refuses to shrink below its content, the column grows, and the composer is pushed off
+   screen again.
 
-**What was not done, and why.** `docs/design-system.md` specifies the streaming affordance
-as "a 2px × 17px accent bar. No typing dots, no shimmer." Typing dots would have been the
-obvious fix for "confusing feedback" and they are ruled out; the cursor blinks instead. The
-blanket `prefers-reduced-motion` rule at the top of `globals.css` disables all of it, and a
-test asserts that a newly added animation cannot escape that block by being declared later
-in the file.
+2. **Auto-scroll moved the document.** `scrollIntoView` on an end marker scrolls whatever
+   ancestor it must, including the page — re-creating the same failure. It now sets
+   `scrollTop` on the transcript container directly.
 
-**Still unresolved:** none of this has been seen against a real model response, because the
-deployment has no ledger and therefore never calls one. Perceived latency with a real call
-is a different problem from perceived latency without one, and only the second has been
-fixed.
+3. **Nothing animated.** Bubbles and the handoff card were mounted at full opacity. Bubbles
+   rise in over 160ms; the card over 240ms after a 120ms beat, so the answer lands and the
+   offer follows it rather than both arriving at once. The streaming cursor blinks. All of
+   it is disabled under `prefers-reduced-motion`, and a test checks that an animation
+   declared after that block is still caught by it.
+
+**Not done:** typing dots. `docs/design-system.md` specifies the streaming affordance as a
+2px accent bar and rules out dots and shimmer.
+
+**Still unverified:** none of this has been seen against a real model response. Perceived
+latency with a ~1s provider call is a different problem, and only the no-model case has
+been looked at.

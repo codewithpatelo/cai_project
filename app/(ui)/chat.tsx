@@ -37,10 +37,15 @@ export function Chat() {
   const { state, send } = useChat()
   const [draft, setDraft] = useState('')
   const transcriptEnd = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    transcriptEnd.current?.scrollIntoView({ block: 'end' })
-  }, [state.turns])
+    // Scroll the transcript container, not the document. scrollIntoView on the
+    // page moves the whole layout and can push the composer out of view -- the
+    // exact failure this layout exists to prevent.
+    const container = scrollRef.current
+    if (container) container.scrollTop = container.scrollHeight
+  }, [state.turns, state.escalated])
 
   const submit = (text: string) => {
     if (state.streaming) return
@@ -62,7 +67,8 @@ export function Chat() {
 
       <Header tier={state.tier} simulated={state.simulated} />
 
-      <main className="gutter" style={{ flex: 1, paddingTop: '24px' }}>
+      <div className="transcript-scroll" ref={scrollRef}>
+        <main className="gutter" style={{ paddingTop: '24px', paddingBottom: '8px' }}>
         {empty ? (
           <EmptyState onPick={submit} disabled={state.streaming} />
         ) : (
@@ -84,8 +90,9 @@ export function Chat() {
             ) : null}
           </ol>
         )}
-        <div ref={transcriptEnd} />
-      </main>
+          <div ref={transcriptEnd} />
+        </main>
+      </div>
 
       <Composer
         draft={draft}

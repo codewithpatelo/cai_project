@@ -85,13 +85,15 @@
 html, body {
   margin: 0;
   padding: 0;
+  height: 100%;
   background: var(--surface);
   color: var(--ink);
   font-family: var(--font-body);
   font-size: 15px;
   line-height: 1.6;
-  /* No horizontal scroll at 320px is a build constraint, not a final pass. */
-  overflow-x: hidden;
+  /* No horizontal scroll at 320px is a build constraint, not a final pass.
+     Vertical scrolling belongs to .transcript-scroll, not to the page. */
+  overflow: hidden;
 }
 
 a { color: var(--accent); }
@@ -134,11 +136,28 @@ a:hover { color: var(--accent-hover); }
  * build (docs/design-system.md § Responsive).
  * ------------------------------------------------------------------------- */
 
+/*
+ * The composer is never scrolled to.
+ *
+ * `min-height` plus a sticky composer scrolls the whole PAGE, so the input only
+ * pins itself once you have already scrolled down to it -- which is exactly the
+ * thing no chat interface does. The app is a fixed-height column instead, and
+ * the transcript is the only scrolling region.
+ */
 .app {
   display: flex;
   flex-direction: column;
   /* dvh, never vh: under the iOS keyboard 100vh pushes the composer off-screen. */
-  min-height: 100dvh;
+  height: 100dvh;
+}
+
+.transcript-scroll {
+  flex: 1 1 auto;
+  /* Without min-height:0 a flex child refuses to shrink below its content, the
+     column grows instead of scrolling, and the composer leaves the viewport. */
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .gutter {
@@ -179,8 +198,7 @@ a:hover { color: var(--accent-hover); }
 }
 
 .composer-bar {
-  position: sticky;
-  bottom: 0;
+  flex: 0 0 auto;
   background: var(--surface);
   border-top: 1px solid var(--border);
   padding-top: 12px;
@@ -246,3 +264,20 @@ a:hover { color: var(--accent-hover); }
    visible rather than only functional. */
 .composer-bar form { transition: opacity 140ms ease-out; }
 .composer-bar form[data-busy='true'] { opacity: 0.7; }
+
+/*
+ * Inline cards arrive rather than appear.
+ *
+ * The handoff card popped in fully formed the instant an answer finished, which
+ * reads as a layout glitch rather than as the bot offering something. It rises
+ * in slightly slower than a message bubble, and after a short beat, so the answer
+ * lands first and the offer follows it.
+ */
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.handoff-card {
+  animation: card-in 240ms ease-out 120ms both;
+}
