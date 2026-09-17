@@ -620,3 +620,37 @@ compares the RPC name and every argument name against the signature parsed out o
 **The general lesson:** a port tested only through its in-memory implementation is tested
 only up to the boundary that matters. The seam between the adapter and the thing it adapts
 needs its own contract test, and the in-memory double cannot provide it.
+
+### ADR-027 — Put the functions next to the database, don't widen the timeout
+
+**Context.** With Supabase configured, `/api/health` still reported `tier: "STATIC"` and
+`spentUsdLifetime: 0`, and nothing appeared in the runtime logs. The governor was failing
+closed on every request and saying nothing about it, which made a broken key, a broken
+schema and an unreachable store indistinguishable from a healthy bot that had spent nothing.
+
+**Fail closed is required. Fail *silent* was not, and was the real defect.** `/api/health`
+now probes the store directly and reports the outcome, the elapsed time and the error
+message — a message that can carry an HTTP status and a path but cannot carry the key.
+
+That probe answered it in one request: `{ ok: true, ms: 669 }` against
+`ledgerTimeoutMs: 400`. The ledger was never broken. The Supabase project is in
+**sa-east-1 (São Paulo)** and the Vercel functions were running in **iad1 (Washington)**, so
+every call crossed a continent and lost a race it was always going to lose.
+
+**Decision.** Pin the functions to `gru1` (São Paulo) in `vercel.json` rather than raising
+the 400ms ceiling.
+
+**Why not just widen the timeout.** The 400ms in `docs/governor-spec.md` §3 is not a
+tuning knob, it is the promise that a stalled ledger degrades the bot *quickly* instead of
+hanging a user on a request that will fail anyway. Raising it to fit a cross-continent round
+trip would trade a visible latency problem for a hidden one and leave the real cause —
+compute a hemisphere away from its data — in place. Colocating turns a 669ms call into a
+local one and leaves the spec's guarantee intact.
+
+**Worth stating plainly:** the design specified a 400ms ledger timeout and never specified
+where either half runs. That is the gap this found. A latency budget without a colocation
+requirement is half a decision.
+
+**Watch for:** a cold lambda's first call includes a TLS handshake, so the margin is
+smaller than the steady-state number suggests. `ledgerProbe.ms` on `/api/health` is the
+number to check after any region or provider change.
