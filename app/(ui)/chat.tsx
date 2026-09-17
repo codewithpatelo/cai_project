@@ -243,19 +243,7 @@ function Bubble({
             </a>
           ),
         )}
-        {streaming ? (
-          <span
-            aria-hidden="true"
-            style={{
-              display: 'inline-block',
-              width: '2px',
-              height: '17px',
-              background: 'var(--accent)',
-              marginLeft: '2px',
-              verticalAlign: 'text-bottom',
-            }}
-          />
-        ) : null}
+        {streaming ? <span aria-hidden="true" className="stream-cursor" /> : null}
       </div>
     </li>
   )
@@ -280,6 +268,7 @@ function Composer({
           onSubmit(draft)
         }}
         className="gutter"
+        data-busy={disabled ? 'true' : 'false'}
         style={{ paddingLeft: 0, paddingRight: 0 }}
       >
         <div style={{ display: 'flex', gap: '8px' }}>

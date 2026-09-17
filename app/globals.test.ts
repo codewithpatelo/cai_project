@@ -135,3 +135,25 @@ describe('AC6.9 / AC6.11 — layout and motion constraints are in the stylesheet
     expect(css).not.toMatch(/@media[^{]*max-width/)
   })
 })
+
+describe('motion is present but disabled under reduced-motion', () => {
+  it('animates the bubble entrance and the streaming cursor', () => {
+    expect(css).toMatch(/@keyframes bubble-in/)
+    expect(css).toMatch(/@keyframes cursor-blink/)
+    expect(css).toMatch(/\.stream-cursor[\s\S]*animation: cursor-blink/)
+  })
+
+  it('still honours prefers-reduced-motion for both', () => {
+    // The blanket reduce block sets animation-duration to ~0 on everything, so a
+    // new animation cannot escape it by being added later in the file.
+    const reduce = /@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? ''
+    expect(reduce).toMatch(/\*,\s*\*::before,\s*\*::after/)
+    expect(reduce).toMatch(/animation-duration:\s*0\.01ms\s*!important/)
+    expect(reduce).toMatch(/animation-iteration-count:\s*1\s*!important/)
+  })
+
+  it('keeps the cursor to the specified 2px accent bar, with no dots or shimmer', () => {
+    expect(css).toMatch(/\.stream-cursor[\s\S]*width: 2px[\s\S]*background: var\(--accent\)/)
+    expect(css).not.toMatch(/typing-dot|shimmer|skeleton/i)
+  })
+})

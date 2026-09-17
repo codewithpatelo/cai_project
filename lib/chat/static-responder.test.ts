@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { staticAnswer, scoreEntry, chunkAnswer } from './static-responder'
+import { staticAnswer, scoreEntry, chunkAnswer, STATIC_PACING } from './static-responder'
 import { FAQ } from '../kb/faq.generated'
 import { SUGGESTIONS } from './suggestions'
 
@@ -103,5 +103,23 @@ describe('static answers stream like a model response', () => {
 
   it('emits more than one chunk for a real answer', () => {
     expect([...chunkAnswer(staticAnswer('What does Cadre AI do?'))].length).toBeGreaterThan(1)
+  })
+})
+
+describe('the static tier is paced, not dumped', () => {
+  it('declares a lead-in and an inter-chunk delay', () => {
+    // Enqueued in a tight loop, every chunk lands in the same frame: the
+    // streaming cursor appears and vanishes instantly and the transcript jumps.
+    // The words were right and the interface still read as broken.
+    expect(STATIC_PACING.leadInMs).toBeGreaterThan(0)
+    expect(STATIC_PACING.betweenChunksMs).toBeGreaterThan(0)
+  })
+
+  it('stays well under the time a real model call takes', () => {
+    // STATIC should feel faster than the model, just not impossibly so.
+    const answer = staticAnswer('What does Cadre AI do?')
+    const chunks = [...chunkAnswer(answer)].length
+    const total = STATIC_PACING.leadInMs + (chunks - 1) * STATIC_PACING.betweenChunksMs
+    expect(total).toBeLessThan(1500)
   })
 })

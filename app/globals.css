@@ -208,3 +208,41 @@ a:hover { color: var(--accent-hover); }
    above 480px so the button is not both icon and label. */
 .send-icon { display: inline-flex; }
 @media (min-width: 480px) { .send-icon { display: none; } }
+
+/* ---------------------------------------------------------------------------
+ * Motion.
+ *
+ * Two things, both small. A message that appears with no transition reads as a
+ * jump rather than an arrival, and a streaming cursor that does not move is
+ * indistinguishable from a stray rectangle. Everything here is disabled under
+ * prefers-reduced-motion by the block at the top of this file.
+ * ------------------------------------------------------------------------- */
+
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.bubble {
+  animation: bubble-in 160ms ease-out;
+}
+
+@keyframes cursor-blink {
+  0%, 45%  { opacity: 1; }
+  55%, 100% { opacity: 0.15; }
+}
+
+.stream-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 17px;
+  background: var(--accent);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: cursor-blink 1s steps(1, end) infinite;
+}
+
+/* The composer dims while a request is in flight, so the disabled state is
+   visible rather than only functional. */
+.composer-bar form { transition: opacity 140ms ease-out; }
+.composer-bar form[data-busy='true'] { opacity: 0.7; }
