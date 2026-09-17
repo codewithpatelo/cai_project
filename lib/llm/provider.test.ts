@@ -94,8 +94,12 @@ describe('the provider is inferred when LLM_PROVIDER is unset', () => {
     expect(activeProvider({ DEEPSEEK_API_KEY: 'x' }).id).toBe('deepseek')
   })
 
-  it('keeps OpenRouter when both keys are present', () => {
-    expect(activeProvider({ DEEPSEEK_API_KEY: 'x', OPENROUTER_API_KEY: 'y' }).id).toBe('openrouter')
+  it('prefers the vendor-named key when both are present', () => {
+    // This assertion used to expect 'openrouter' and that expectation caused the
+    // outage: a DeepSeek key had been placed in OPENROUTER_API_KEY, as this
+    // project's own instructions asked, and adding DEEPSEEK_API_KEY later left
+    // both set. See the dedicated describe block below.
+    expect(activeProvider({ DEEPSEEK_API_KEY: 'x', OPENROUTER_API_KEY: 'y' }).id).toBe('deepseek')
   })
 
   it('lets an explicit LLM_PROVIDER override the inference', () => {
@@ -119,5 +123,36 @@ describe('the default model follows the provider', () => {
     // We could reach no pricing page, so the rate is the most expensive one we
     // did capture. That degrades the bot early rather than overspending.
     expect(primaryTier({ LLM_PROVIDER: 'deepseek' }).inputPerMTok).toBe(1.0)
+  })
+})
+
+describe('the vendor-named key wins when both are present', () => {
+  it('chooses DeepSeek when DEEPSEEK_API_KEY is set, even alongside OPENROUTER_API_KEY', () => {
+    // This project told people to put a DeepSeek key in OPENROUTER_API_KEY, so
+    // "both set" most often means one key written twice. Preferring OpenRouter
+    // there sent a DeepSeek key to openrouter.ai, took a 401, and degraded to
+    // canned answers without a word -- for a day.
+    expect(activeProvider({ DEEPSEEK_API_KEY: 'x', OPENROUTER_API_KEY: 'x' }).id).toBe('deepseek')
+  })
+
+  it('still lets an explicit LLM_PROVIDER override the inference', () => {
+    expect(
+      activeProvider({ LLM_PROVIDER: 'openrouter', DEEPSEEK_API_KEY: 'x', OPENROUTER_API_KEY: 'y' }).id,
+    ).toBe('openrouter')
+  })
+
+  it('ignores an empty LLM_PROVIDER rather than reading it as a choice', () => {
+    expect(activeProvider({ LLM_PROVIDER: '', DEEPSEEK_API_KEY: 'x' }).id).toBe('deepseek')
+    expect(activeProvider({ LLM_PROVIDER: '   ' }).id).toBe('openrouter')
+  })
+
+  it('ignores an empty vendor key', () => {
+    expect(activeProvider({ DEEPSEEK_API_KEY: '  ', OPENROUTER_API_KEY: 'y' }).id).toBe('openrouter')
+  })
+
+  it('pairs the provider with a model id that provider will accept', () => {
+    // Sending google/gemini-3.8-flash to api.deepseek.com is the same class of
+    // mismatch, and produces an error that reads like a bad key.
+    expect(primaryTier({ DEEPSEEK_API_KEY: 'x', OPENROUTER_API_KEY: 'x' }).id).toBe('deepseek-chat')
   })
 })

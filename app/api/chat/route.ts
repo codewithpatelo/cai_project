@@ -14,6 +14,7 @@
 import { assemble } from '@/lib/prompt/assemble'
 import { COMPILED_KB } from '@/lib/kb/kb.generated'
 import { streamCompletion } from '@/lib/llm/client'
+import { activeProvider } from '@/lib/llm/provider'
 import { createGovernor, SupabaseLedgerStore } from '@/lib/governor'
 import type { Decision, Tier } from '@/lib/governor/types'
 import { governorConfigFromEnv, supabaseConfigFromEnv } from '@/lib/chat/governor-config'
@@ -146,7 +147,22 @@ export async function POST(request: Request): Promise<Response> {
 
           if (next.done) {
             if (!next.value.ok && !completed) {
-              // Provider 429, 5xx, timeout: the user gets a real answer, not an error.
+              // The user gets a real answer, not an error -- but the operator gets
+              // a log line. Degrading silently on every request is indistinguishable
+              // from a bot that simply has nothing to say, and it cost a day.
+              // Carries a failure kind, an HTTP status, the provider and the model
+              // id. No key, no user text: `detail` is built from a status code.
+              console.error(
+                JSON.stringify({
+                  event: 'upstream_failure',
+                  kind: next.value.error.kind,
+                  status: next.value.error.status ?? null,
+                  detail: next.value.error.detail,
+                  provider: activeProvider().id,
+                  model: decision.model,
+                  at: new Date().toISOString(),
+                }),
+              )
               serveStatic()
             }
             break

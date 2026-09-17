@@ -18,6 +18,8 @@ import {
   supabaseKeySource,
 } from '@/lib/chat/governor-config'
 import { COMPILED_KB_TOKENS } from '@/lib/kb/kb.generated'
+import { activeProvider } from '@/lib/llm/provider'
+import { primaryTier } from '@/lib/llm/models'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -33,7 +35,19 @@ export async function GET(): Promise<Response> {
     // The variable NAME that supplied the key, never its value. Configuration is
     // the thing that goes wrong here, and it is not a secret.
     ledgerKeySource: supabaseKeySource(),
-    modelConfigured: process.env.OPENROUTER_API_KEY ? true : false,
+    // Which service a real request would actually talk to, and with which model.
+    // "A key is configured" was never the useful question: the key can be present
+    // and belong to a different provider than the one being called.
+    provider: activeProvider().id,
+    model: primaryTier().id,
+    modelConfigured: activeProvider().keyEnvNames.some((n) => {
+      const v = process.env[n]
+      return v !== undefined && v.trim() !== ''
+    }),
+    keyVariablesSet: activeProvider().keyEnvNames.filter((n) => {
+      const v = process.env[n]
+      return v !== undefined && v.trim() !== ''
+    }),
     kbTokens: COMPILED_KB_TOKENS,
   }
 

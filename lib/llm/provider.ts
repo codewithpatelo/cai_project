@@ -80,9 +80,15 @@ export function isProviderId(value: string): value is ProviderId {
 export function activeProvider(env: EnvLike = process.env): Provider {
   const configured = env.LLM_PROVIDER
   let id: ProviderId = 'openrouter'
-  if (configured !== undefined && isProviderId(configured)) {
-    id = configured
-  } else if (env.DEEPSEEK_API_KEY && !env.OPENROUTER_API_KEY) {
+  if (configured !== undefined && configured.trim() !== '' && isProviderId(configured.trim())) {
+    id = configured.trim() as ProviderId
+  } else if (env.DEEPSEEK_API_KEY && env.DEEPSEEK_API_KEY.trim() !== '') {
+    // A key under the VENDOR's own name is a deliberate statement about which
+    // service it belongs to. The generic variable is not: this project told
+    // people to put a DeepSeek key in OPENROUTER_API_KEY, so "both are set"
+    // most likely means one key written twice, not two providers. Preferring
+    // OpenRouter there sent a DeepSeek key to openrouter.ai, got a 401, and
+    // degraded to canned answers without a word.
     id = 'deepseek'
   }
   const base = PROVIDERS[id]
