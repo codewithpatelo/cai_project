@@ -63,7 +63,32 @@ export async function GET(): Promise<Response> {
     })
   }
 
-  const governor = createGovernor(cfg, new SupabaseLedgerStore(supabase))
+  const store = new SupabaseLedgerStore(supabase)
+
+  /**
+   * Probe the store directly and report why it failed.
+   *
+   * The governor catches store errors and fails closed, which is the required
+   * behaviour -- but it means a misconfigured or unreachable ledger looks
+   * identical to a healthy one that has simply spent nothing. Fail closed is not
+   * the same as fail silent, and this endpoint exists to tell them apart.
+   *
+   * The message carries an HTTP status and a path. It cannot carry the key.
+   */
+  const probeStartedAt = Date.now()
+  let probe: { ok: boolean; ms: number; detail?: string }
+  try {
+    await store.getMany([`${cfg.namespace}:health:probe`])
+    probe = { ok: true, ms: Date.now() - probeStartedAt }
+  } catch (error) {
+    probe = {
+      ok: false,
+      ms: Date.now() - probeStartedAt,
+      detail: error instanceof Error ? error.message : 'unknown error',
+    }
+  }
+
+  const governor = createGovernor(cfg, store)
   const snapshot = await governor.snapshot()
   const decision = await governor.authorize({ ip: 'health-check', sessionId: 'health-check' })
 
@@ -75,5 +100,8 @@ export async function GET(): Promise<Response> {
     simulated: snapshot.simulated,
     reserveRemainingUsd: Number(snapshot.reserveRemainingUsd.toFixed(4)),
     isReserveWindow: snapshot.isReserveWindow,
+    ledgerProbe: probe,
+    /** The ceiling the governor races the store against, for comparison with probe.ms. */
+    ledgerTimeoutMs: 400,
   })
 }
