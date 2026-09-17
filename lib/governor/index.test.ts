@@ -74,22 +74,43 @@ describe('authorize() — fail closed (AC3.4)', () => {
     expect(decision).toMatchObject({ allowed: false, tier: 'STATIC', reason: 'ledger_unavailable', model: null })
   })
 
-  describe('a store that exceeds the 400ms budget', () => {
+  describe('a store slower than its configured budget', () => {
     afterEach(() => {
       vi.useRealTimers()
     })
 
+    // The budget is set explicitly rather than assumed. It used to be a hardcoded
+    // 400ms that was never measured; this test asserts the BEHAVIOUR -- a slow
+    // store fails closed at whatever ceiling is configured -- so tuning the
+    // number cannot quietly turn the guarantee off.
+    const BUDGET_MS = 300
+
     it('times out rather than waiting — a timeout IS unavailability, not a retry', async () => {
       vi.useFakeTimers()
       const clock = new FakeClock(new Date('2026-09-17T00:00:00Z'))
-      const cfg = testConfig(clock)
-      const governor = createGovernor(cfg, new SlowStore(500)) // slower than the 400ms budget
+      const cfg = { ...testConfig(clock), ledgerTimeoutMs: BUDGET_MS }
+      const governor = createGovernor(cfg, new SlowStore(BUDGET_MS + 200))
 
       const decisionPromise = governor.authorize({ ip: '1.2.3.4', sessionId: 's1' })
-      await vi.advanceTimersByTimeAsync(400)
+      await vi.advanceTimersByTimeAsync(BUDGET_MS)
       const decision = await decisionPromise
 
       expect(decision).toMatchObject({ allowed: false, tier: 'STATIC', reason: 'ledger_unavailable', model: null })
+    })
+
+    it('still authorizes a store that answers inside the budget', async () => {
+      // The counterpart matters as much: a ceiling set below the cost of a cold
+      // connection does not protect anything, it just fails every request closed.
+      vi.useFakeTimers()
+      const clock = new FakeClock(new Date('2026-09-17T00:00:00Z'))
+      const cfg = { ...testConfig(clock), ledgerTimeoutMs: BUDGET_MS }
+      const governor = createGovernor(cfg, new SlowStore(BUDGET_MS - 200))
+
+      const decisionPromise = governor.authorize({ ip: '1.2.3.4', sessionId: 's1' })
+      await vi.advanceTimersByTimeAsync(BUDGET_MS)
+      const decision = await decisionPromise
+
+      expect(decision.reason).not.toBe('ledger_unavailable')
     })
   })
 })

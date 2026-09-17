@@ -61,6 +61,16 @@ export interface GovernorConfig {
   now: Clock
   /** HMAC key for telemetry's session hash. Never itself logged. */
   telemetrySalt: string
+  /**
+   * How long a ledger call may take before it counts as unavailable (§3).
+   *
+   * Budgets the whole round trip the user waits on -- DNS, TLS and the query --
+   * not just the query. Authorising one request costs several calls, and on a
+   * cold connection the handshake alone can exceed a query-sized budget, which
+   * fails the request closed for a reason that has nothing to do with the ledger
+   * being unhealthy. Measure `ledgerProbe.ms` on /api/health before changing it.
+   */
+  ledgerTimeoutMs?: number
 }
 
 export interface Decision {

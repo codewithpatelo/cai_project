@@ -180,9 +180,23 @@ The failure mode it prevents — store unreachable, every request looks free, $5
 is unrecoverable, because the key cannot be topped up. Degrading to canned FAQ answers
 during a store outage is a bad afternoon. Being broke on review day is a failed take-home.
 
-Concretely: the ledger call times out at **400 ms**; a timeout *is* unavailability, not a
-retry. There is no in-process counter fallback, because serverless instances don't share one
-and a per-instance counter would under-count by exactly the concurrency factor.
+Concretely: the ledger call times out at **2,000 ms** (configurable, `ledgerTimeoutMs`); a
+timeout *is* unavailability, not a retry. There is no in-process counter fallback, because
+serverless instances don't share one and a per-instance counter would under-count by exactly
+the concurrency factor.
+
+> **This was 400 ms, chosen without measuring anything, and it was wrong.** The budget
+> covers the whole round trip a user waits on — DNS, TLS and the query — and authorising a
+> single request costs several calls (four rate-limit writes plus one spend read). Measured
+> against a *colocated* Supabase project, one cold call is 330–670 ms: the handshake alone
+> exceeds a query-sized budget. At 400 ms every cold request failed closed, which is
+> indistinguishable from a permanently broken store — the bot served canned answers and
+> `/api/health` reported a healthy ledger. A budget below the cost of a cold connection does
+> not protect against a stalled ledger; it guarantees the failure it was meant to detect.
+>
+> 2,000 ms still bounds the wait: worst case a user sees a static answer in two seconds
+> instead of a broken product. The fail-closed property is untouched — what changed is only
+> how long "unavailable" takes to establish.
 
 An unreachable store therefore degrades the bot to STATIC rather than taking it down, which
 is the correct behaviour.

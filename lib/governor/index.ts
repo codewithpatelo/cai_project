@@ -29,8 +29,16 @@ export { MemoryLedgerStore, FailingStore, SlowStore, SupabaseLedgerStore } from 
 export { simulationFromEnv, assertValidConfig } from './config'
 export { hashSession } from './telemetry'
 
-/** The ledger call budget: a timeout IS unavailability, not something to retry (spec §3). */
-const LEDGER_TIMEOUT_MS = 400
+/**
+ * The ledger call budget: a timeout IS unavailability, not something to retry (spec §3).
+ *
+ * The original 400ms was chosen without measuring anything. Measured against a
+ * colocated Supabase project, one cold call costs 330-670ms of DNS, TLS and
+ * query, and authorising a single request makes several calls. A budget below
+ * that does not protect against a stalled ledger -- it guarantees every cold
+ * request fails closed, which looks exactly like a permanently broken store.
+ */
+const DEFAULT_LEDGER_TIMEOUT_MS = 2000
 
 export interface Governor {
   authorize(ctx: { ip: string; sessionId: string }): Promise<Decision>
@@ -148,6 +156,7 @@ function summarizeDroppedTurns<T extends { role: string; content: string }>(drop
 export function createGovernor(cfg: GovernorConfig, store: LedgerStore): Governor {
   assertValidConfig(cfg)
   const simulation = cfg.simulation ?? simulationFromEnv()
+  const ledgerTimeoutMs = cfg.ledgerTimeoutMs ?? DEFAULT_LEDGER_TIMEOUT_MS
 
   async function authorize(ctx: { ip: string; sessionId: string }): Promise<Decision> {
     const now = cfg.now()
@@ -164,12 +173,12 @@ export function createGovernor(cfg: GovernorConfig, store: LedgerStore): Governo
     }
 
     try {
-      const rl = await withTimeout(checkRateLimits(store, cfg, ctx), LEDGER_TIMEOUT_MS)
+      const rl = await withTimeout(checkRateLimits(store, cfg, ctx), ledgerTimeoutMs)
       if (rl.blocked && rl.reason) {
         return rateLimitedDecision(rl.reason, rl.retryAfterSec, now, cfg)
       }
 
-      const totals = await withTimeout(store.getMany([lifetimeKey(cfg), todayKey(cfg, now)]), LEDGER_TIMEOUT_MS)
+      const totals = await withTimeout(store.getMany([lifetimeKey(cfg), todayKey(cfg, now)]), ledgerTimeoutMs)
       const snapshot = computeSnapshot({
         cfg,
         now,
@@ -250,7 +259,7 @@ export function createGovernor(cfg: GovernorConfig, store: LedgerStore): Governo
       return computeSnapshot({ cfg, now, spentLifetime: forcedSpend, spentToday: forcedSpend, simulated: true })
     }
     try {
-      const totals = await withTimeout(store.getMany([lifetimeKey(cfg), todayKey(cfg, now)]), LEDGER_TIMEOUT_MS)
+      const totals = await withTimeout(store.getMany([lifetimeKey(cfg), todayKey(cfg, now)]), ledgerTimeoutMs)
       return computeSnapshot({
         cfg,
         now,

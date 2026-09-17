@@ -75,6 +75,20 @@ export async function GET(): Promise<Response> {
    *
    * The message carries an HTTP status and a path. It cannot carry the key.
    */
+  const governor = createGovernor(cfg, store)
+
+  /**
+   * authorize() FIRST, on a cold connection, exactly as a real request meets it.
+   *
+   * The probe used to run first and reported a healthy ledger -- while every real
+   * chat request failed closed. The probe was paying the TLS handshake and
+   * leaving authorize() a warm connection no real request ever gets, so this
+   * endpoint said PRIMARY while the product served canned answers. A diagnostic
+   * that warms the thing it is measuring is worse than no diagnostic.
+   */
+  const decision = await governor.authorize({ ip: 'health-check', sessionId: 'health-check' })
+  const snapshot = await governor.snapshot()
+
   const probeStartedAt = Date.now()
   let probe: { ok: boolean; ms: number; detail?: string }
   try {
@@ -88,10 +102,6 @@ export async function GET(): Promise<Response> {
     }
   }
 
-  const governor = createGovernor(cfg, store)
-  const snapshot = await governor.snapshot()
-  const decision = await governor.authorize({ ip: 'health-check', sessionId: 'health-check' })
-
   return Response.json({
     ...base,
     tier: decision.tier,
@@ -102,8 +112,11 @@ export async function GET(): Promise<Response> {
     simulated: snapshot.simulated,
     reserveRemainingUsd: Number(snapshot.reserveRemainingUsd.toFixed(4)),
     isReserveWindow: snapshot.isReserveWindow,
-    ledgerProbe: probe,
-    /** The ceiling the governor races the store against, for comparison with probe.ms. */
-    ledgerTimeoutMs: 400,
+    /** Measured on a WARM connection: authorize() above already paid the handshake. */
+    ledgerProbeWarm: probe,
+    /** The ceiling the governor races the store against. */
+    ledgerTimeoutMs: cfg.ledgerTimeoutMs,
+    /** What a real cold request actually got. The number that matters. */
+    coldAuthorizeReason: decision.reason,
   })
 }

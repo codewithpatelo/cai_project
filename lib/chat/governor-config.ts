@@ -93,6 +93,7 @@ export function governorConfigFromEnv(env: EnvLike = process.env): GovernorConfi
     ...(simulationFromEnv(env) ? { simulation: simulationFromEnv(env) } : {}),
     now: () => new Date(),
     telemetrySalt: present(env.TELEMETRY_SALT) ?? '',
+    ledgerTimeoutMs: num(env.GOVERNOR_LEDGER_TIMEOUT_MS, 2000),
   }
 }
 

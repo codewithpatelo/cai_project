@@ -684,3 +684,38 @@ worse than no diagnostic.
 **The general lesson:** `??` guards against absent, not against meaningless. At a boundary
 where the values arrive as strings from somewhere you do not control, those are different
 things, and the difference is invisible until it is arithmetic.
+
+### ADR-029 — A 400 ms budget that was never measured, and a probe that warmed what it measured
+
+**Context.** With the ledger reachable and `/api/health` reporting `tier: "PRIMARY"`, the
+live bot still answered from canned text. The `governor_ledger` table settled it: rate-limit
+keys for the real visitor's IP existed, and **no `dev:spend:*` key did**. `authorize()` was
+running, incrementing rate limits, and then failing closed. DeepSeek was never called.
+
+**Two separate faults, and the second hid the first.**
+
+1. **The budget could not be met.** `authorize()` makes five calls — four rate-limit writes
+   and one spend read — against a ceiling of 400 ms that covers DNS, TLS and query. One
+   *cold* call to a colocated Supabase measured 330–670 ms. The handshake alone exceeded the
+   budget, so every cold request failed closed. That is not protection against a stalled
+   ledger; it is a guarantee of the failure the ceiling exists to detect. The 400 ms in
+   `governor-spec.md` §3 was written without measuring anything, so the spec was fixed
+   first: 2,000 ms, configurable via `ledgerTimeoutMs` / `GOVERNOR_LEDGER_TIMEOUT_MS`, with
+   the measurement recorded next to it. Fail-closed is untouched — only how long
+   "unavailable" takes to establish.
+
+2. **`/api/health` was lying, and it was my own fault.** The probe added in ADR-027 ran
+   *before* `authorize()`, paid the TLS handshake, and handed `authorize()` a warm
+   connection that no real request ever gets. So the endpoint reported PRIMARY while every
+   visitor got STATIC. `authorize()` now runs first, cold, exactly as a real request meets
+   the store; the probe runs after and is labelled `ledgerProbeWarm`, and
+   `coldAuthorizeReason` reports what a real cold request actually got.
+
+**The lesson worth keeping:** a diagnostic that warms the thing it measures is worse than no
+diagnostic, because it converts an outage into a clean bill of health. The probe was added
+to stop fail-closed being fail-silent and promptly created a more convincing silence.
+
+**And on the number:** a latency budget chosen by intuition is a guess with a unit attached.
+This one was off by roughly a factor of two against the *best* case — a colocated database —
+and nothing in the test suite could see it, because every governor test uses an in-memory
+store where the budget is never reached.
