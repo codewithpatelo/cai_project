@@ -93,6 +93,8 @@ jobs:
         # Paced to stay under the deployment's per-IP rate limit, so ~8s a case.
         timeout-minutes: 20
         run: pnpm eval "$SECTION" --target "$TARGET"
+        env:
+          EVAL_TOKEN: ${{ secrets.EVAL_TOKEN }}
 
       - uses: actions/upload-artifact@v4
         if: always()

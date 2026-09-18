@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useState } from 'react'
+import { useId, useState, type CSSProperties } from 'react'
 import type { Urgency } from '@/lib/chat/lead'
 
 /**
@@ -28,11 +28,28 @@ type Status =
   | { kind: 'dismissed' }
 
 export function HandoffForm({ sessionId, topic }: { sessionId: string; topic: string }) {
+  // Starts closed. The bot may offer to pass details on; the form appears only if
+  // the visitor takes the offer.
+  //
+  // It used to open by itself the moment the bot made the offer, which meant the
+  // bot asked "want me to pass your details on?" and then answered its own
+  // question by putting a form in front of you. Turn one of a conversation about a
+  // published framework ended in a lead form. That reads as "I can't help further,
+  // here are some humans" -- and it killed the conversation every time (ADR-033).
+  const [open, setOpen] = useState(false)
   const [status, setStatus] = useState<Status>({ kind: 'editing' })
   const [urgency, setUrgency] = useState<Urgency>('general')
   const ids = useId()
 
   if (status.kind === 'dismissed') return null
+
+  if (!open) {
+    return (
+      <button type="button" className="handoff-open" onClick={() => setOpen(true)} style={openButtonStyle}>
+        Pass my details to the team
+      </button>
+    )
+  }
 
   if (status.kind === 'sent') {
     return (
@@ -227,4 +244,22 @@ function Field({
       />
     </div>
   )
+}
+
+/**
+ * The closed state: one button, the width of its own text.
+ *
+ * Deliberately quiet. It is an option the visitor may take, not the end of the
+ * conversation announcing itself.
+ */
+const openButtonStyle: CSSProperties = {
+  background: 'transparent',
+  border: '1px solid var(--line)',
+  borderRadius: '999px',
+  color: 'var(--ink-muted)',
+  cursor: 'pointer',
+  font: 'inherit',
+  fontSize: '0.875rem',
+  minHeight: '44px',
+  padding: '0.5rem 1rem',
 }

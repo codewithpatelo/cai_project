@@ -1,0 +1,42 @@
+name: walkthrough
+
+# One visitor, one conversation, against the deployment.
+#
+# The eval checks 37 questions in isolation, and a conversation that dead-ended at
+# turn one still passed 35 of them -- because no case ever asked what the second
+# turn felt like. This is the cheap check that the thing is usable: five turns,
+# roughly five cents, run on a commit marked [walk].
+on:
+  push:
+    branches: ['**']
+
+jobs:
+  walkthrough:
+    if: contains(github.event.head_commit.message, '[walk]')
+    runs-on: ubuntu-latest
+    env:
+      TARGET: https://cai-project-gray.vercel.app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.33.0 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Wait for this commit to be the one serving
+        run: |
+          for attempt in $(seq 1 40); do
+            live=$(curl -sS --max-time 10 "$TARGET/api/health" | node -pe "JSON.parse(require('fs').readFileSync(0,'utf8')).commit" 2>/dev/null || echo error)
+            [ "$live" = "$GITHUB_SHA" ] && { echo "serving $live"; exit 0; }
+            echo "attempt $attempt: serving ${live}"
+            sleep 15
+          done
+          echo "::error::deployment never caught up to $GITHUB_SHA"; exit 1
+
+      - name: Walk one visitor through a conversation
+        run: pnpm tsx scripts/walkthrough.ts "$TARGET"
+        env:
+          EVAL_TOKEN: ${{ secrets.EVAL_TOKEN }}

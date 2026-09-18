@@ -850,3 +850,42 @@ signal-detection defect, and system prompt design is named under System Design &
 Architecture (25%). The purely cosmetic complaint in the same report — a bare `_` as
 the streaming indicator — was left alone deliberately, because there is no mock for a
 thinking state and the brief does not score it.
+
+---
+
+## ADR-033 — The form opens when the visitor asks for it
+
+**Status:** accepted · 2026-09-18
+
+**First, who wanted it.** Cadre's brief says one thing about this scenario: *"A user
+asking a question the bot can't answer — and needs to escalate or redirect."* It does
+not ask for a form, for lead capture, or for details to be collected. The lead-capture
+form was my addition, written into `docs/architecture.md` on 2026-09-16 and justified
+there as "the product's actual value" — my reasoning, not the client's requirement.
+"Escalate or redirect" is satisfied by pointing at the contact page.
+
+**What it did.** The form mounted open the moment the bot's answer matched an
+escalation signal. So the bot would ask "want me to pass your details to the team?"
+and then answer its own question by putting three input fields in front of the
+visitor. On turn one. Under a correct, complete answer about a framework Cadre
+publishes.
+
+The visitor's report: it reads as *"I don't know any more, I'll hand you to some
+humans because I can't cope."* The demo lasts a minute, because there is nothing to do
+after a form appears.
+
+ADR-032 tightened *when* the signal fires and changed nothing about this, because the
+defect was never the trigger. It was that an offer materialised as a form.
+
+**Decision.** The card starts closed: one quiet button, `Pass my details to the team`.
+The fields exist only if the visitor takes the offer. And the prompt no longer lets the
+bot make the offer at all on a question it answered — if it answered, even partly, it
+ends on what else it can cover.
+
+**How this was missed.** 35 of 37 eval cases passed while the product dead-ended at
+turn one, because every case is a single question in isolation and none of them asks
+what the second turn feels like. A green suite measured the answers and never the
+experience. `scripts/walkthrough.ts` now runs one visitor through five connected turns
+against the deployment and fails if a lead form appears under a question the bot
+answered — the first check in this project that tests using the thing rather than
+querying it.
