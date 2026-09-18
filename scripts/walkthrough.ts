@@ -11,6 +11,7 @@
  */
 
 import { shouldEscalate } from '../lib/chat/protocol'
+import { followUpsFor } from '../lib/chat/followups'
 
 const TURNS = [
   'What is the AI Maturity Index?',
@@ -66,6 +67,7 @@ async function main(): Promise<number> {
 
   const history: Turn[] = []
   let formShownOnAnswerable = 0
+  let deadEnds = 0
 
   for (const [i, message] of TURNS.entries()) {
     if (i > 0) await new Promise((r) => setTimeout(r, 8000))
@@ -73,18 +75,31 @@ async function main(): Promise<number> {
     history.push({ role: 'user', content: message }, { role: 'assistant', content: answer })
 
     const form = shouldEscalate(answer)
+    const asked = history.filter((t) => t.role === 'user').map((t) => t.content)
+    const chips = form ? [] : followUpsFor(message, answer, asked)
+    const botAsked = /\?/.test(answer.trim().split(/(?<=[.!?])\s+/).slice(-2).join(' '))
+
     // Only the last turn (pricing) is a question the bot genuinely cannot answer.
     const answerable = i < TURNS.length - 1
     if (form && answerable) formShownOnAnswerable += 1
 
+    // A turn is a dead end when there is nothing to do next: no chip to click, no
+    // question from the bot to answer, and no offer on the table.
+    const wayForward = chips.length > 0 || botAsked || form
+    if (!wayForward) deadEnds += 1
+
     console.log(`\n── turn ${i + 1} ──`)
     console.log(`you:  ${message}`)
     console.log(`bot:  ${answer.trim()}`)
-    console.log(`      [lead form would ${form ? 'APPEAR' : 'not appear'}]${form && answerable ? '  <-- on a question it answered' : ''}`)
+    if (chips.length > 0) console.log(`      [chips] ${chips.map((c) => c.label).join('  ·  ')}`)
+    if (botAsked) console.log('      [the bot asked something -- no chips, so the visitor just answers]')
+    if (form) console.log('      [button: Pass my details to the team]')
+    if (!wayForward) console.log('      *** DEAD END: nothing to click, nothing asked, no offer ***')
   }
 
   console.log(`\n${formShownOnAnswerable} of ${TURNS.length - 1} answerable turns ended in a lead form.`)
-  return formShownOnAnswerable === 0 ? 0 : 1
+  console.log(`${deadEnds} of ${TURNS.length} turns were dead ends.`)
+  return formShownOnAnswerable === 0 && deadEnds === 0 ? 0 : 1
 }
 
 main().then((code) => process.exit(code))

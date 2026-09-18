@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useChat, type Tier } from './use-chat'
 import { SUGGESTIONS } from '@/lib/chat/suggestions'
 import { HandoffForm } from './handoff-form'
+import { followUpsFor } from '@/lib/chat/followups'
 import { ThemeToggle } from './theme-toggle'
 import { getSessionId } from './use-chat'
 
@@ -53,6 +54,18 @@ export function Chat() {
     void send(text)
   }
 
+  // Derived, not stored: the chips are a pure function of the turn that just
+  // finished, so there is no state to clear when the visitor sends something new.
+  const lastTurn = state.turns[state.turns.length - 1]
+  const followUps =
+    lastTurn !== undefined && lastTurn.role === 'assistant' && !state.escalated
+      ? followUpsFor(
+          lastUserMessage(state.turns),
+          lastTurn.content,
+          state.turns.filter((t) => t.role === 'user').map((t) => t.content),
+        )
+      : []
+
   const empty = state.turns.length === 0
 
   return (
@@ -86,6 +99,27 @@ export function Chat() {
             {state.escalated && !state.streaming ? (
               <li>
                 <HandoffForm sessionId={getSessionId()} topic={lastUserMessage(state.turns)} />
+              </li>
+            ) : null}
+
+            {/* Somewhere to go next. An answer with no next step is where this
+                conversation used to end (ADR-034). */}
+            {!state.streaming && followUps.length > 0 ? (
+              <li>
+                <nav aria-label="Suggested follow-up questions" className="followups">
+                  {followUps.map((f) => (
+                    <button
+                      key={f.label}
+                      type="button"
+                      className="followup-chip"
+                      onClick={() => {
+                        void submit(f.label)
+                      }}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </nav>
               </li>
             ) : null}
           </ol>

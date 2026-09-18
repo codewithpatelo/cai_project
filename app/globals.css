@@ -314,3 +314,45 @@ a:hover { color: var(--accent-hover); }
 .handoff-card {
   animation: card-in 240ms ease-out 120ms both;
 }
+
+/*
+ * Follow-up chips.
+ *
+ * Wrapping flex, never a horizontal scroller. The chips are whole questions and
+ * vary a lot in length; in a narrow column a scroller cuts the long ones off
+ * behind a fade, so the visitor cannot read a suggestion without dragging it into
+ * view -- strictly worse than not offering it. Wrapping handles both shapes and
+ * needs no fade overlays or arrow buttons in the tab order.
+ */
+.followups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.followup-chip {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.875rem;
+  min-height: 44px;
+  padding: 0.5rem 0.875rem;
+  text-align: left;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+  white-space: normal;
+}
+
+.followup-chip:hover {
+  background: var(--surface-raised);
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.followup-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

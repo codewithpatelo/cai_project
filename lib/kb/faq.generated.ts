@@ -155,9 +155,10 @@ export const FAQ: readonly FaqEntry[] = [
       "encryption",
       "safe",
       "training data",
-      "sub-processor"
+      "sub-processor",
+      "privacy policy"
     ],
-    "answer": "Two things I can tell you. Cadre works with OpenAI, Anthropic, Google, Microsoft, AWS, Salesforce and Snowflake, and uses OpenRouter for model access — so model choice is made per workload rather than locked to one vendor. And guardrails with human oversight are part of what they build, not an add-on. What I can't do is state Cadre's security, privacy, retention or compliance position: they don't publish one, and that's a contractual answer their team gives against your actual requirements, not something a chatbot should improvise. https://www.cadreai.com/contact, or I can pass your details on.",
+    "answer": "Cadre publishes its approach under \"LLM Selection & Data Security\": picking the right LLM per use case, black-boxing your data so it is never used to train other models, stopping staff from putting company secrets into personal LLMs, and getting the team onto secure, compliant tools. On its own site data, the privacy policy says Cadre keeps personal data for two years and the services are hosted in the US. https://www.cadreai.com/legal/privacy-policy has the detail. What is not published is any compliance certification — no SOC 2, ISO or HIPAA attestation — or the data agreement for a client engagement. Those come from the team.",
     "source": "07-llm-and-security.md"
   },
   {
