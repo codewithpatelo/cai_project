@@ -11,7 +11,7 @@
  */
 
 import { shouldEscalate } from '../lib/chat/protocol'
-import { followUpsFor } from '../lib/chat/followups'
+import { followUpsFor, invitesReply } from '../lib/chat/followups'
 
 const TURNS = [
   'What is the AI Maturity Index?',
@@ -77,7 +77,7 @@ async function main(): Promise<number> {
     const form = shouldEscalate(answer)
     const asked = history.filter((t) => t.role === 'user').map((t) => t.content)
     const chips = form ? [] : followUpsFor(message, answer, asked)
-    const botAsked = /\?/.test(answer.trim().split(/(?<=[.!?])\s+/).slice(-2).join(' '))
+    const botAsked = invitesReply(answer)
 
     // Only the last turn (pricing) is a question the bot genuinely cannot answer.
     const answerable = i < TURNS.length - 1

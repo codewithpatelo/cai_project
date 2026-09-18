@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { followUpsFor } from './followups'
+import { followUpsFor, invitesReply } from './followups'
 
 describe('follow-up chips', () => {
   it('offers somewhere to go after a complete answer', () => {
@@ -52,5 +52,30 @@ describe('follow-up chips', () => {
     const chips = followUpsFor('What does Cadre do?', 'Strategy, engineering and agents.')
     expect(chips.length).toBeGreaterThan(0)
     expect(covered.size).toBeGreaterThan(0)
+  })
+})
+
+describe('invitesReply is the single detector', () => {
+  it('recognises a conditional refine without a question mark', () => {
+    // The real turn 3 that a second, weaker detector called a dead end. Qwairy
+    // finds this ("if you tell me X, I can Y") is the commonest way an assistant
+    // keeps a conversation open, so reading it as a full stop is backwards.
+    expect(
+      invitesReply('More on that here: https://www.cadreai.com/industries/private-equity. If you tell me what you are trying to solve, I can point at the closest fit.'),
+    ).toBe(true)
+  })
+
+  it('recognises a plain question', () => {
+    expect(invitesReply('Which part of the deal lifecycle are you looking at?')).toBe(true)
+  })
+
+  it('does not fire on a complete answer that merely contains a link', () => {
+    expect(invitesReply('All eight pillars are published on https://www.cadreai.com/strategy.')).toBe(false)
+  })
+
+  it('agrees with followUpsFor, so the two can never disagree', () => {
+    const inviting = 'If you tell me your industry, I can point you at the closest fit.'
+    expect(invitesReply(inviting)).toBe(true)
+    expect(followUpsFor('Do you work with PE?', inviting)).toEqual([])
   })
 })

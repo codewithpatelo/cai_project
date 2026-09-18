@@ -43,6 +43,20 @@ export interface FollowUp {
  */
 type Mode = 'answer-the-bot' | 'open'
 
+/**
+ * Does the answer put the next move to the visitor?
+ *
+ * Exported because the walkthrough needs the same judgement, and it had its own
+ * weaker copy that only looked for a question mark. That copy reported turn 3 of
+ * a real conversation as a dead end when the bot had closed with "if you tell me
+ * what you're trying to solve, I can point at the closest fit" -- a conditional
+ * refine, which the Qwairy study finds is the single commonest way ChatGPT keeps
+ * a conversation open. Two detectors means the weaker one eventually lies.
+ */
+export function invitesReply(answer: string): boolean {
+  return detectMode(answer) === 'answer-the-bot'
+}
+
 function detectMode(answer: string): Mode {
   // The cue is in the closing sentences. Looking further back risks firing on a
   // rhetorical question inside the body of the answer.
