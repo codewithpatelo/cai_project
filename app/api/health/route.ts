@@ -19,7 +19,7 @@ import {
 } from '@/lib/chat/governor-config'
 import { COMPILED_KB_TOKENS } from '@/lib/kb/kb.generated'
 import { activeProvider } from '@/lib/llm/provider'
-import { primaryTier } from '@/lib/llm/models'
+import { primaryTier, present } from '@/lib/llm/models'
 import { streamCompletion } from '@/lib/llm/client'
 
 export const runtime = 'nodejs'
@@ -228,6 +228,15 @@ export async function GET(request: Request): Promise<Response> {
     coldAuthorizeReason: decision.reason,
     /** Whether forged assistant turns can be detected (LLM01, indirect). */
     historyIntegrity: cfg.telemetrySalt === '' ? 'unverified (no TELEMETRY_SALT)' : 'enforced',
+    /**
+     * Which commit is actually serving. Vercel sets this at build time.
+     *
+     * The eval runs on the same push that triggers the deploy, so without this it
+     * grades whatever was live when the runner happened to start -- and a prompt
+     * change would be scored against the previous prompt, silently. CI now waits
+     * for its own SHA. A commit hash is public information; it is in the repo.
+     */
+    commit: present(process.env.VERCEL_GIT_COMMIT_SHA) ?? 'unknown',
     ...(modelProbe === undefined ? {} : { modelProbe }),
   })
 }

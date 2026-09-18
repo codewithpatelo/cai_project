@@ -54,6 +54,23 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # The eval runs on the same push that triggers Vercel's build, so without
+      # this it would grade whatever was live when the runner started -- a prompt
+      # change scored against the previous prompt, with nothing going red.
+      - name: Wait for this commit to be the one serving
+        run: |
+          for attempt in $(seq 1 40); do
+            live=$(curl -sS --max-time 10 "$TARGET/api/health" | node -pe "JSON.parse(require('fs').readFileSync(0,'utf8')).commit" 2>/dev/null || echo error)
+            if [ "$live" = "$GITHUB_SHA" ]; then
+              echo "deployment is serving $live"
+              exit 0
+            fi
+            echo "attempt $attempt: serving ${live}, waiting for ${GITHUB_SHA}"
+            sleep 15
+          done
+          echo "::error::deployment never caught up to $GITHUB_SHA; not spending the budget grading the wrong build"
+          exit 1
+
       - name: Health check before spending anything
         run: |
           echo "::group::/api/health"
