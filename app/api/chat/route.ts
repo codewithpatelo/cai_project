@@ -18,6 +18,8 @@ import { activeProvider } from '@/lib/llm/provider'
 import { createGovernor, SupabaseLedgerStore } from '@/lib/governor'
 import type { Decision, Tier } from '@/lib/governor/types'
 import { governorConfigFromEnv, supabaseConfigFromEnv } from '@/lib/chat/governor-config'
+import { asEvalBudget, isEvalRequest } from '@/lib/chat/eval-budget'
+import type { GovernorConfig } from '@/lib/governor/types'
 import { validate, sseFrame, shouldEscalate } from '@/lib/chat/protocol'
 import { staticAnswer, chunkAnswer } from '@/lib/chat/static-responder'
 import { filterUrls } from '@/lib/chat/url-filter'
@@ -43,10 +45,10 @@ function clientIp(request: Request): string {
  * cannot pay for. An in-process counter would under-count by the concurrency
  * factor, which is why there isn't one.
  */
-function makeGovernor() {
+function makeGovernor(cfg: GovernorConfig) {
   const supabase = supabaseConfigFromEnv()
   if (supabase === null) return null
-  return createGovernor(governorConfigFromEnv(), new SupabaseLedgerStore(supabase))
+  return createGovernor(cfg, new SupabaseLedgerStore(supabase))
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -65,7 +67,12 @@ export async function POST(request: Request): Promise<Response> {
   const { sessionId, message, history } = validated.value
   const ip = clientIp(request)
 
-  const cfg = governorConfigFromEnv()
+  // Evaluation traffic spends the eval ledger, not the visitor's. Without this an
+  // eval run degrades the live bot for real visitors -- which is exactly what it
+  // did on 2026-09-18 (ADR-030).
+  const cfg = isEvalRequest(request.headers.get('x-eval-token'))
+    ? asEvalBudget(governorConfigFromEnv())
+    : governorConfigFromEnv()
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -95,7 +102,7 @@ export async function POST(request: Request): Promise<Response> {
       }
 
       try {
-        const governor = makeGovernor()
+        const governor = makeGovernor(cfg)
 
         let decision: Decision | null = null
         if (governor !== null) {

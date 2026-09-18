@@ -1,0 +1,40 @@
+name: health
+
+# Reports the deployment's live state on every push. Costs nothing: /api/health
+# calls no model.
+#
+# This exists because the only channel that could tell us what the deployment was
+# doing was the eval workflow, and the eval spends the budget. Checking "is it
+# serving PRIMARY?" should not cost 37 model calls.
+on:
+  push:
+    branches: ['**']
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    env:
+      TARGET: https://cai-project-gray.vercel.app
+    steps:
+      - name: Wait for this commit, then report
+        run: |
+          for attempt in $(seq 1 40); do
+            body=$(curl -sS --max-time 10 "$TARGET/api/health" || echo '{}')
+            live=$(printf '%s' "$body" | node -pe "JSON.parse(require('fs').readFileSync(0,'utf8')).commit" 2>/dev/null || echo error)
+            if [ "$live" = "$GITHUB_SHA" ]; then
+              echo "::group::/api/health @ $live"
+              printf '%s' "$body" | node -e "console.log(JSON.stringify(JSON.parse(require('fs').readFileSync(0,'utf8')), null, 2))"
+              echo "::endgroup::"
+              tier=$(printf '%s' "$body" | node -pe "JSON.parse(require('fs').readFileSync(0,'utf8')).tier")
+              echo "tier: $tier"
+              # Not a failure -- STATIC is a legitimate state and the whole point of
+              # the governor. It just needs to be visible rather than discovered by
+              # a visitor.
+              [ "$tier" = "STATIC" ] && echo "::warning::deployment is serving STATIC"
+              exit 0
+            fi
+            echo "attempt $attempt: serving ${live}, waiting for ${GITHUB_SHA}"
+            sleep 15
+          done
+          echo "::error::deployment never caught up to $GITHUB_SHA"
+          exit 1

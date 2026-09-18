@@ -185,9 +185,16 @@ interface CaseResult {
  */
 async function runCaseAgainstUrl(c: EvalCase, target: string): Promise<CaseResult> {
   const startedAt = Date.now()
+  // Charges the eval ledger instead of the visitor budget, when the deployment is
+  // configured for it. Without the token the run still works -- it just spends the
+  // visitor's allowance, which is how a two-run afternoon degraded the live bot.
+  const evalToken = process.env.EVAL_TOKEN?.trim()
   const response = await fetch(new URL('/api/chat', target), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(evalToken === undefined || evalToken === '' ? {} : { 'x-eval-token': evalToken }),
+    },
     body: JSON.stringify({ sessionId: `eval-${c.id}`, message: c.input, history: [] }),
   }).catch(() => null)
 

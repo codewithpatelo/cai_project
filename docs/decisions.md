@@ -719,3 +719,79 @@ to stop fail-closed being fail-silent and promptly created a more convincing sil
 This one was off by roughly a factor of two against the *best* case — a colocated database —
 and nothing in the test suite could see it, because every governor test uses an in-memory
 store where the budget is never reached.
+
+---
+
+## ADR-030 — Evaluation traffic spends its own ledger
+
+**Status:** accepted · 2026-09-18
+
+**Context.** `docs/eval-set.md` has specified from the start that the eval reads a
+separate `EVAL_BUDGET_USD` key rather than the production one. That held while the
+runner called the provider directly. On 2026-09-17 a `--target <url>` mode was added
+so the eval could run from CI against the deployment — strictly more faithful, because
+it exercises the governor, the route, the output filter and the SSE framing that a
+direct provider call never touches. It also entered through `/api/chat` as an ordinary
+visitor, so every case was charged to the visitor budget. Nobody noticed, because the
+per-case cost column reads `$0.0000` on that path: the target path cannot see the
+provider's usage record.
+
+Two full runs on the afternoon of 2026-09-18 spent $0.485 — a whole day's allowance —
+and the governor degraded the live deployment to STATIC at case A16. That is the
+governor working exactly as designed, against traffic that was never a visitor's. The
+bot was serving canned text to real visitors because of its own test suite.
+
+**Decision.** The eval identifies itself with a shared secret (`EVAL_TOKEN`) and is
+charged to the `eval` namespace with its own `EVAL_BUDGET_USD` budget. Everything else
+about the config — tiers, pricing, thresholds, reserve window, horizon — is left
+identical, because an eval running under different pacing rules is not evaluating the
+deployed system.
+
+The secret is required, not optional. An unset `EVAL_TOKEN` disables the route rather
+than falling back to something permissive: the eval losing its separate ledger is an
+accounting problem, a visitor gaining one is a hole in the ceiling.
+
+**The ledger was corrected, not reset.** The misattributed spend was moved to the
+`eval:*` keys, not written off:
+
+| key | before | after |
+|---|---|---|
+| `dev:spend:day:2026-09-17` | 0.419593 | 0.000000 |
+| `dev:spend:day:2026-09-18` | 0.486945 | 0.002083 |
+| `dev:spend:lifetime` | 0.906538 | 0.002083 |
+| `eval:spend:lifetime` | — | 0.904455 |
+
+$0.002083 + $0.904455 = $0.906538, the lifetime figure before the move. Attribution is
+by model-call count, which the CI logs record exactly: 45 eval calls on 09-17 and 52 on
+09-18. 09-17 was eval-only, giving a mean of $0.009324 a call, applied to 09-18's 52.
+The $0.002083 left on the visitor ledger is the real human traffic.
+
+**Consequences.** Running the eval no longer degrades the live bot. The visitor budget
+now reflects visitors, which is the number the demo's central claim rests on. The cost
+is one more secret to set, and a run without it silently falls back to the visitor
+budget — so the workflow surfaces which ledger it charged.
+
+**What this cost to learn:** four eval runs, ~$0.90, and an afternoon in which the
+deployed bot answered real questions with canned text. The spec had the right design
+written down before any of it; the `--target` shortcut went around it without anyone
+noticing that it had.
+
+---
+
+## ADR-031 — A zero-cost channel for "what is the deployment doing"
+
+**Status:** accepted · 2026-09-18
+
+**Context.** The sandbox this project is built in cannot reach the deployment: the
+agent proxy returns 403. For most of the build the only way to observe the live system
+was the eval workflow — which spends the budget. So the question "is it serving
+PRIMARY?" cost 37 model calls to answer, and was therefore asked rarely, which is how
+a whole afternoon of STATIC went unnoticed (ADR-030).
+
+**Decision.** A `health` workflow runs on every push, waits for the deployment to serve
+that commit, and prints `/api/health`. It calls no model and spends nothing.
+
+**Consequences.** Observing the deployment is now free and automatic, and the expensive
+workflow is reserved for what actually needs the model. A STATIC tier is reported as a
+warning rather than a failure — it is a legitimate state and the entire point of the
+governor; it just should not be something a visitor discovers before we do.
