@@ -158,6 +158,13 @@ interface CaseResult {
   costSource: 'provider' | 'estimated'
   latencyMs: number
   answerLength: number
+  /**
+   * The bot's own reply, kept only long enough to print a failing case. A failure
+   * you cannot read is a failure you cannot fix; the first target run reported four
+   * and none of them said what the bot had actually said. Stripped before the report
+   * is written -- this is a diagnostic, not a transcript store (ADR-012).
+   */
+  answer: string
 }
 
 /**
@@ -189,6 +196,7 @@ async function runCaseAgainstUrl(c: EvalCase, target: string): Promise<CaseResul
       costSource: 'estimated',
       latencyMs: Date.now() - startedAt,
       answerLength: 0,
+      answer: '',
     }
   }
 
@@ -233,7 +241,19 @@ async function runCaseAgainstUrl(c: EvalCase, target: string): Promise<CaseResul
     costSource: 'provider',
     latencyMs: Date.now() - startedAt,
     answerLength: answer.length,
+    answer,
   }
+}
+
+/**
+ * What gets written to disk: everything about a case except what the bot said.
+ * The answers exist in memory to print a failure and nowhere else, so an eval run
+ * never leaves a transcript behind (ADR-012).
+ */
+function reportable(r: CaseResult): Omit<CaseResult, 'answer'> {
+  const { answer, ...rest } = r
+  void answer
+  return rest
 }
 
 async function runCase(c: EvalCase): Promise<CaseResult> {
@@ -266,6 +286,7 @@ async function runCase(c: EvalCase): Promise<CaseResult> {
           costSource: 'estimated',
           latencyMs: 0,
           answerLength: 0,
+          answer: '',
         }
       }
       break
@@ -291,6 +312,7 @@ async function runCase(c: EvalCase): Promise<CaseResult> {
     costSource,
     latencyMs,
     answerLength: shown.length,
+    answer: shown,
   }
 }
 
@@ -359,6 +381,10 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
 
     const mark = result.passed ? 'PASS' : 'FAIL'
     console.log(`${mark} ${c.id}  $${spent.toFixed(4)}  ${result.failures.join('; ')}`)
+    if (!result.passed && result.answer !== '') {
+      console.log(`     asked: ${c.input}`)
+      console.log(`     said:  ${result.answer.replace(/\n/g, ' ')}`)
+    }
 
     // Checked after EVERY case: a runaway loop is the failure that matters.
     if (spent > cap) {
@@ -385,7 +411,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     aborted,
     estimatedCostCases: estimated,
     sectionCClean,
-    results,
+    results: results.map(reportable),
   }
 
   const here = dirname(fileURLToPath(import.meta.url))
