@@ -80,12 +80,22 @@ describe('the assertions themselves are right', () => {
 
   it('B1 passes a clean refusal', () => {
     expect(
-      check('B1', "Cadre doesn't publish pricing and I won't guess. https://www.cadreai.com/contact"),
+      check(
+        'B1',
+        "Cadre doesn't publish pricing and I won't guess. https://www.cadreai.com/contact " +
+          "Or give me your name, work email and company and I'll pass your details to the team.",
+      ),
     ).toEqual([])
   })
 
   it('B1 catches a price expressed as a range in words', () => {
-    expect(check('B1', 'Usually around 50k per project. https://www.cadreai.com/contact')).not.toEqual([])
+    expect(
+      check(
+        'B1',
+        'Usually around 50k per project. https://www.cadreai.com/contact ' +
+          "Give me your name, work email and company and I'll pass your details on.",
+      ),
+    ).not.toEqual([])
   })
 
   it('A7 fails an invented portal link', () => {

@@ -795,3 +795,58 @@ that commit, and prints `/api/health`. It calls no model and spends nothing.
 workflow is reserved for what actually needs the model. A STATIC tier is reported as a
 warning rather than a failure — it is a legitimate state and the entire point of the
 governor; it just should not be something a visitor discovers before we do.
+
+---
+
+## ADR-032 — The lead form is an ending, not punctuation
+
+**Status:** accepted · 2026-09-18
+
+**Context.** A visitor reported that the bot felt like a dead end: ask a question, get
+an answer with a lead form wedged under it, no invitation to continue. "Estímulo,
+reacción, punto." The form itself is right — it is lead capture, and as an ending it
+is a good ending. The problem was that it was *every* ending.
+
+Two causes, both ours.
+
+**The trigger was a proxy for the wrong thing.** `shouldEscalate` matched the contact
+URL:
+
+```ts
+return /cadreai\.com\/contact/i.test(answer)
+```
+
+The system prompt instructs the bot to give the contact page in every handoff, and the
+handoff list covers most topics, so the URL appears in nearly every reply. The form
+therefore appeared under nearly every reply. The function's own comment admitted the
+gap — "Phase 5 refines it when the form exists to be surfaced" — and Phase 5 never did.
+A test pinned the buggy behaviour (`escalates when the answer offers the contact page`),
+which is the second time in this project a passing test defended a defect.
+
+**The prompt had no notion of continuing.** It is heavily tuned for brevity and
+refusal, with not one line about leaving the visitor somewhere to go. Worse, the
+decline-length rule added hours earlier (ADR-029's neighbour, the C8 fix) said a
+decline is "one or two sentences, and the second one is usually the handoff" — which
+optimised for not being tiresome and made the bot curt.
+
+**Decision.** The trigger is the offer, not the URL: the form opens when the bot says
+it will take the visitor's details, which is the sentence the form actually belongs
+under. Pointing at the contact page stays free, and an answer that does so is still an
+answer.
+
+The prompt gains two rules: brief is not the same as final (end with a way forward, ask
+the obvious next question), and offer to take details when the conversation has really
+reached the end of what the bot can do — not as punctuation on an answer it could give.
+
+**Consequences.** Three eval cases now assert the form does *not* appear on a question
+the bot can answer, and two assert it does on a genuine dead end; `invitesContinuation`
+checks the bot left somewhere to go. The risk is the opposite failure — a bot that
+chats instead of handing off — which is what the `offersForm` assertions on B1 and D5
+are there to catch.
+
+**On scope:** Cadre's brief weights five dimensions and UI/UX is not among them. This
+was not done for polish. A form under every answer is a system-prompt and
+signal-detection defect, and system prompt design is named under System Design &
+Architecture (25%). The purely cosmetic complaint in the same report — a bare `_` as
+the streaming indicator — was left alone deliberately, because there is no mock for a
+thinking state and the brief does not score it.

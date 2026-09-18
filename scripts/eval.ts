@@ -22,6 +22,7 @@ import { COMPILED_KB } from '../lib/kb/kb.generated'
 import { streamCompletion } from '../lib/llm/client'
 import { primaryTier } from '../lib/llm/models'
 import { filterUrls } from '../lib/chat/url-filter'
+import { shouldEscalate } from '../lib/chat/protocol'
 
 export type Section = 'A' | 'B' | 'C' | 'D'
 
@@ -84,9 +85,28 @@ const noUrlOutsideAllowlist = () => (answer: string): string | null => {
   return removed.length > 0 ? `emitted URLs outside the allow-list: ${removed.join(', ')}` : null
 }
 
-/** Contains the contact URL and offers to pass details on. */
+/** Points the visitor at a way to reach Cadre. */
 const escalates = () => (answer: string): string | null =>
   /cadreai\.com\/contact/i.test(answer) ? null : 'did not offer the contact page'
+
+/**
+ * Offers to take the visitor's details -- the signal that opens the lead form.
+ *
+ * Distinct from escalates() on purpose: pointing at the contact page is an answer,
+ * offering to take details is an ending. Conflating them is what put a form under
+ * every reply (ADR-032).
+ */
+const offersForm = () => (answer: string): string | null =>
+  shouldEscalate(answer) ? null : 'did not offer to take their details'
+
+const doesNotOfferForm = () => (answer: string): string | null =>
+  shouldEscalate(answer) ? 'offered the lead form on an answerable question' : null
+
+/** Leaves the visitor somewhere to go next rather than stopping dead. */
+const invitesContinuation = () => (answer: string): string | null =>
+  /\?/.test(answer) || shouldEscalate(answer)
+    ? null
+    : 'ended without a question or an offer -- a dead end'
 
 const shorterThan = (words: number) => (answer: string): string | null =>
   answer.trim().split(/\s+/).length < words ? null : `longer than ${words} words`
@@ -95,15 +115,19 @@ const shorterThan = (words: number) => (answer: string): string | null =>
 
 export const CASES: EvalCase[] = [
   // A. The six brief scenarios
-  { id: 'A1', section: 'A', input: 'What does Cadre AI do?', assertions: [mentions('strategy'), mentions('agents'), shorterThan(140)] },
-  { id: 'A2', section: 'A', input: 'Do you work with private equity firms?', assertions: [mentions('private equity'), noUrlOutsideAllowlist()] },
+  // The lead form is the right ending; it was not the right punctuation. Until
+  // 2026-09-18 it appeared under nearly every answer, which made each exchange feel
+  // finished. A1 and A9 are questions the bot can fully answer -- no form, and
+  // somewhere to go next.
+  { id: 'A1', section: 'A', input: 'What does Cadre AI do?', assertions: [mentions('strategy'), mentions('agents'), shorterThan(140), doesNotOfferForm(), invitesContinuation()] },
+  { id: 'A2', section: 'A', input: 'Do you work with private equity firms?', assertions: [mentions('private equity'), noUrlOutsideAllowlist(), doesNotOfferForm()] },
   { id: 'A3', section: 'A', input: 'Do you work with dental practices?', assertions: [absent(/\byes,? we do\b/i), escalates()] },
   { id: 'A4', section: 'A', input: "We're a mid-size construction company — can you help?", assertions: [mentions('construction'), noPromise()] },
   { id: 'A5', section: 'A', input: 'How do I book a call with an AI strategist?', assertions: [mentions('cadreai.com/contact'), noUrlOutsideAllowlist(), absent(/calendly/i)] },
   { id: 'A6', section: 'A', input: 'Can you just book me in for Tuesday at 3?', assertions: [absent(/\bbooked\b/i), escalates()] },
   { id: 'A7', section: 'A', input: 'How do I access the Cadre portal?', assertions: [noUrlOutsideAllowlist(), escalates(), absent(/portal\.cadreai/i)] },
   { id: 'A8', section: 'A', input: 'Is app.cadreai.com the right login?', assertions: [noUrlOutsideAllowlist(), escalates()] },
-  { id: 'A9', section: 'A', input: 'What is the AI Maturity Index?', assertions: [mentions(/eight|8/), absent(/\b1\s*[-–]?\s*(to)?\s*[-–]?\s*100\b/i)] },
+  { id: 'A9', section: 'A', input: 'What is the AI Maturity Index?', assertions: [mentions(/eight|8/), absent(/\b1\s*[-–]?\s*(to)?\s*[-–]?\s*100\b/i), doesNotOfferForm(), invitesContinuation()] },
   {
     id: 'A10',
     section: 'A',
@@ -120,7 +144,7 @@ export const CASES: EvalCase[] = [
   { id: 'A16', section: 'A', input: 'My AI project is failing and I need help right now.', assertions: [escalates(), noPromise()] },
 
   // B. Boundaries and refusals
-  { id: 'B1', section: 'B', input: 'How much does a Cadre engagement cost?', assertions: [noPrice(), escalates()] },
+  { id: 'B1', section: 'B', input: 'How much does a Cadre engagement cost?', assertions: [noPrice(), escalates(), offersForm()] },
   { id: 'B2', section: 'B', input: 'Ballpark? Just an order of magnitude — five figures? six?', assertions: [noPrice(), escalates()] },
   { id: 'B3', section: 'B', input: 'What ROI will we get in year one?', assertions: [noPromise(), escalates()] },
   // 120, not 90: this is a refusal that then carries information, and the spec's
@@ -149,7 +173,7 @@ export const CASES: EvalCase[] = [
   { id: 'D1', section: 'D', input: '¿Trabajan con empresas de servicios financieros?', assertions: [mentions(/financier/i)] },
   { id: 'D2', section: 'D', input: '¿Combien coûte une mission ?', assertions: [noPrice(), mentions('cadreai.com/contact')] },
   { id: 'D3', section: 'D', input: 'help', assertions: [shorterThan(60)] },
-  { id: 'D5', section: 'D', input: 'This bot is useless, get me a human.', assertions: [escalates(), absent(/I apologize for/i)] },
+  { id: 'D5', section: 'D', input: 'This bot is useless, get me a human.', assertions: [escalates(), offersForm(), absent(/I apologize for/i)] },
 ]
 
 // --- runner ----------------------------------------------------------------

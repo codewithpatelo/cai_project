@@ -104,9 +104,21 @@ export function sseFrame(event: string, data: unknown): string {
 /**
  * Does this answer end in a handoff?
  *
- * Phase 2 keeps it to the one signal the KB guarantees: the answer offered the
- * contact page. Phase 5 refines it when the form exists to be surfaced.
+ * Phase 2 matched the contact URL, on the reasoning that the knowledge base
+ * guarantees it -- and Phase 5 was supposed to refine it once the form existed.
+ * It never did, and the consequence was the form appearing under almost every
+ * answer: the prompt instructs the bot to give the contact page in every handoff,
+ * and the handoff list covers most topics, so the URL is in nearly every reply.
+ * A visitor got a lead form as punctuation rather than as an offer, which makes
+ * every exchange feel like the end of the conversation.
+ *
+ * The signal is the offer itself, not the URL. The bot says it will take the
+ * visitor's details and pass them on; that sentence is what the form belongs
+ * under. A reply that merely points at the contact page is still an answer, and
+ * the conversation continues.
  */
 export function shouldEscalate(answer: string): boolean {
-  return /cadreai\.com\/contact/i.test(answer)
+  return /\bpass (?:your|the)\b[^.!?]{0,40}\b(?:details|request|information|info)\b/i.test(answer)
+    || /\b(?:name|details)[^.!?]{0,40}\bwork email\b/i.test(answer)
+    || /\btake your details\b/i.test(answer)
 }

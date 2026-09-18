@@ -122,8 +122,18 @@ describe('the handler rejects bad input over HTTP without streaming', () => {
 })
 
 describe('escalation detection', () => {
-  it('escalates when the answer offers the contact page', () => {
-    expect(shouldEscalate('Pricing is not published. https://www.cadreai.com/contact')).toBe(true)
+  it('escalates when the answer offers to take the visitor\'s details', () => {
+    expect(
+      shouldEscalate("Pricing is not published. Give me your name, work email and company and I'll pass your details on."),
+    ).toBe(true)
+  })
+
+  it('does not escalate merely because the contact page was mentioned', () => {
+    // This case asserted the opposite until 2026-09-18, which is how the lead
+    // form came to appear under nearly every answer: the prompt puts the contact
+    // URL in most replies, so matching it made every exchange a dead end. The
+    // full contract lives in lib/chat/protocol.test.ts.
+    expect(shouldEscalate('Pricing is not published. https://www.cadreai.com/contact')).toBe(false)
   })
 
   it('does not escalate on an ordinary grounded answer', () => {
